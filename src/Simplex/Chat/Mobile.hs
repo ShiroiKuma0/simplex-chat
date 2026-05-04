@@ -272,7 +272,8 @@ mobileChatOpts dbOptions =
       muteNotifications = True,
       markRead = False,
       createBot = Nothing,
-      userDisplayName = Nothing
+      userDisplayName = Nothing,
+      userImageFile = Nothing
     }
 
 defaultMobileConfig :: ChatConfig
