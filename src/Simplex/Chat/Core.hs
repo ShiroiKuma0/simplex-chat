@@ -19,6 +19,7 @@ import Control.Monad.Except
 import Control.Monad.Reader
 import qualified Data.ByteString.Char8 as B
 import Data.List (find)
+import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (encodeUtf8)
 import Data.Time.Clock (getCurrentTime)
@@ -43,7 +44,7 @@ import Text.Read (readMaybe)
 import UnliftIO.Async
 
 simplexChatCore :: ChatConfig -> ChatOpts -> (User -> ChatController -> IO ()) -> IO ()
-simplexChatCore cfg@ChatConfig {confirmMigrations, testView, chatHooks} opts@ChatOpts {coreOptions = coreOptions@CoreChatOpts {dbOptions, logAgent, yesToUpMigrations, migrationBackupPath, maintenance}, createBot} chat =
+simplexChatCore cfg@ChatConfig {confirmMigrations, testView, chatHooks} opts@ChatOpts {coreOptions = coreOptions@CoreChatOpts {dbOptions, logAgent, yesToUpMigrations, migrationBackupPath, maintenance}, createBot, userDisplayName} chat =
   case logAgent of
     Just level -> do
       setLogLevel level
@@ -58,10 +59,14 @@ simplexChatCore cfg@ChatConfig {confirmMigrations, testView, chatHooks} opts@Cha
     run db@ChatDatabase {chatStore} = do
       users <- withTransaction chatStore getUsers
       u_ <- selectActiveUser coreOptions chatStore users
+      forM_ ((,) <$> userDisplayName <*> u_) $ \(name, User {localDisplayName}) ->
+        when (localDisplayName /= name) $ do
+          putStrLn $ "Active user display name " <> show localDisplayName <> " does not match --user-display-name " <> show name
+          exitFailure
       let backgroundMode = maintenance
       cc <- newChatController db u_ cfg opts backgroundMode
       forM_ (preStartHook chatHooks) ($ cc)
-      u <- maybe (noMaintenance >> createActiveUser cc coreOptions createBot) pure u_
+      u <- maybe (noMaintenance >> createActiveUser cc coreOptions createBot userDisplayName) pure u_
       unless testView $ putStrLn $ "Current user: " <> userStr u
       runSimplexChat cfg opts u cc chat
     noMaintenance = when maintenance $ do
@@ -116,24 +121,26 @@ selectActiveUser CoreChatOpts {chatRelay} st users
                     let user = users !! (n - 1)
                      in Just <$> withTransaction st (`setActiveUser` user)
 
-createActiveUser :: ChatController -> CoreChatOpts -> Maybe CreateBotOpts -> IO User
-createActiveUser cc CoreChatOpts {chatRelay} = \case
+createActiveUser :: ChatController -> CoreChatOpts -> Maybe CreateBotOpts -> Maybe Text -> IO User
+createActiveUser cc CoreChatOpts {chatRelay} createBot_ userDisplayName_ = case createBot_ of
   Just CreateBotOpts {botDisplayName, allowFiles} -> do
     let preferences = if allowFiles then Nothing else Just emptyChatPrefs {files = Just FilesPreference {allow = FANo}}
     createUser exitFailure $ (mkProfile botDisplayName) {peerType = Just CPTBot, preferences}
-  Nothing
-    | chatRelay -> do
-        putStrLn
-          "No chat relay user profile found, it will be created now.\n\
-          \Please choose chat relay display name."
-        loop
-    | otherwise -> do
-        putStrLn
-          "No user profiles found, it will be created now.\n\
-          \Please choose your display name.\n\
-          \It will be sent to your contacts when you connect.\n\
-          \It is only stored on your device and you can change it later."
-        loop
+  Nothing -> case userDisplayName_ of
+    Just displayName -> createUser exitFailure $ mkProfile displayName
+    Nothing
+      | chatRelay -> do
+          putStrLn
+            "No chat relay user profile found, it will be created now.\n\
+            \Please choose chat relay display name."
+          loop
+      | otherwise -> do
+          putStrLn
+            "No user profiles found, it will be created now.\n\
+            \Please choose your display name.\n\
+            \It will be sent to your contacts when you connect.\n\
+            \It is only stored on your device and you can change it later."
+          loop
   where
     loop = do
       displayName <- T.pack <$> withPrompt "display name: " getLine

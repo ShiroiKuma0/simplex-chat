@@ -22,7 +22,7 @@ where
 import Control.Logger.Simple (LogLevel (..))
 import qualified Data.Attoparsec.ByteString.Char8 as A
 import qualified Data.ByteString.Char8 as B
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (encodeUtf8)
@@ -50,7 +50,8 @@ data ChatOpts = ChatOpts
     autoAcceptFileSize :: Integer,
     muteNotifications :: Bool,
     markRead :: Bool,
-    createBot :: Maybe CreateBotOpts
+    createBot :: Maybe CreateBotOpts,
+    userDisplayName :: Maybe Text
   }
 
 data CoreChatOpts = CoreChatOpts
@@ -402,6 +403,13 @@ chatOptsP appDir defaultDbName = do
       ( long "create-bot-allow-files"
           <> help "Flag for created bot to allow files (only allowed together with --create-bot option)"
       )
+  userDisplayName <-
+    optional $
+      strOption
+        ( long "user-display-name"
+            <> metavar "NAME"
+            <> help "Use existing active user with this display name, or create one on the first start (incompatible with --create-bot-display-name)"
+        )
   pure
     ChatOpts
       { coreOptions,
@@ -417,10 +425,13 @@ chatOptsP appDir defaultDbName = do
         muteNotifications,
         markRead,
         createBot = case createBotDisplayName of
-          Just botDisplayName -> Just CreateBotOpts {botDisplayName, allowFiles = createBotAllowFiles}
+          Just botDisplayName
+            | isJust userDisplayName -> error "--user-display-name and --create-bot-display-name are mutually exclusive"
+            | otherwise -> Just CreateBotOpts {botDisplayName, allowFiles = createBotAllowFiles}
           Nothing
             | createBotAllowFiles -> error "--create-bot-allow-files option requires --create-bot-name option"
-            | otherwise -> Nothing
+            | otherwise -> Nothing,
+        userDisplayName
       }
 
 parseProtocolServers :: ProtocolTypeI p => ReadM [ProtoServerWithAuth p]
