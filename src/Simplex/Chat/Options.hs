@@ -66,6 +66,7 @@ data CoreChatOpts = CoreChatOpts
     tbqSize :: Natural,
     deviceName :: Maybe Text,
     chatRelay :: Bool,
+    chatRelayServer :: Maybe SMPServerWithAuth,
     highlyAvailable :: Bool,
     yesToUpMigrations :: Bool,
     migrationBackupPath :: Maybe FilePath,
@@ -239,6 +240,14 @@ coreChatOptsP appDir defaultDbName = do
       ( long "relay"
           <> help "Run as a chat relay client"
       )
+  chatRelayServer <-
+    optional $
+      option
+        strParse
+        ( long "relay-address-server"
+            <> metavar "SERVER"
+            <> help "SMP server to use for chat relay address link (requires --relay)"
+        )
   highlyAvailable <-
     switch
       ( long "ha"
@@ -282,6 +291,9 @@ coreChatOptsP appDir defaultDbName = do
         tbqSize,
         deviceName,
         chatRelay,
+        chatRelayServer = case chatRelayServer of
+          Just _ | not chatRelay -> error "--relay-address-server option requires --relay option"
+          _ -> chatRelayServer,
         highlyAvailable,
         yesToUpMigrations,
         migrationBackupPath,
