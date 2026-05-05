@@ -2253,7 +2253,7 @@ processChatCommand vr nm = \case
     CRContactsList user <$> withFastStore' (\db -> getUserContacts db vr user)
   ListContacts -> withUser $ \User {userId} ->
     processChatCommand vr nm $ APIListContacts userId
-  APICreateMyAddress userId srv_ -> withUserId userId $ \user@User {userChatRelay} -> do
+  APICreateMyAddress userId server_ -> withUserId userId $ \user@User {userChatRelay} -> do
     withFastStore' (\db -> runExceptT $ getUserAddress db user) >>= \case
       Left SEUserContactLinkNotFound -> pure ()
       Left e -> throwError $ ChatErrorStore e
@@ -2265,8 +2265,8 @@ processChatCommand vr nm = \case
           | otherwise = contactShortLinkData (userProfileDirect user Nothing Nothing True) Nothing
         userLinkData = UserContactLinkData UserContactData {direct = True, owners = [], relays = [], userData}
     -- TODO [certs rcv]
-    (connId, (ccLink, _serviceId)) <- withAgent $ \a -> case srv_ of
-      Just srv -> createConnectionOnServer a nm (aUserId user) True True SCMContact (Just userLinkData) Nothing srv IKPQOn subMode
+    (connId, (ccLink, _serviceId)) <- withAgent $ \a -> case server_ of
+      Just server -> createConnectionOnServer a nm (aUserId user) True True SCMContact (Just userLinkData) Nothing server IKPQOn subMode
       Nothing -> createConnection a nm (aUserId user) True True SCMContact (Just userLinkData) Nothing IKPQOn subMode
     ccLink' <- shortenCreatedLink ccLink
     let ccLink'' = if isTrue userChatRelay then setShortLinkType CCTRelay ccLink' else ccLink'
