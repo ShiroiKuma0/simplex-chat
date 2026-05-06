@@ -221,7 +221,9 @@ mkChatOpts DirectoryOpts {coreOptions, serviceName} =
       autoAcceptFileSize = 0,
       muteNotifications = True,
       markRead = False,
-      createBot = Just CreateBotOpts {botDisplayName = serviceName, allowFiles = False}
+      createBot = Just CreateBotOpts {botDisplayName = serviceName, allowFiles = False},
+      userDisplayName = Nothing,
+      userImageFile = Nothing
     }
 
 parseMigrateLog :: ReadM MigrateLog
