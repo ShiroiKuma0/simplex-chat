@@ -129,7 +129,7 @@ actual fun PlatformTextField(
     }
     editText.layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     editText.maxLines = 16
-    editText.inputType = InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or editText.inputType
+    editText.inputType = InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_AUTO_CORRECT or editText.inputType
     editText.setTextColor(textColor.toArgb())
     editText.textSize = textStyle.value.fontSize.value * appPrefs.fontScale.get()
     editText.background = ColorDrawable(Color.Transparent.toArgb())
@@ -161,8 +161,15 @@ actual fun PlatformTextField(
       if (!composeState.value.inProgress) {
         onMessageChange(ComposeMessage(text.toString(), TextRange(minOf(editText.selectionStart, editText.selectionEnd), maxOf(editText.selectionStart, editText.selectionEnd))))
       } else if (text.toString() != composeState.value.message.text) {
-        editText.setText(composeState.value.message.text)
-        editText.setSelection(composeState.value.message.selection.start, composeState.value.message.selection.end)
+        // Don't break an active IME composition (autocorrect, swipe-typing, dictionary lookup).
+        val ed = editText.editableText
+        val cStart = android.view.inputmethod.BaseInputConnection.getComposingSpanStart(ed)
+        val cEnd = android.view.inputmethod.BaseInputConnection.getComposingSpanEnd(ed)
+        val isComposing = cStart >= 0 && cEnd >= 0 && cStart != cEnd
+        if (!isComposing) {
+          editText.setText(composeState.value.message.text)
+          editText.setSelection(composeState.value.message.selection.start, composeState.value.message.selection.end)
+        }
       }
     }
     editText.doAfterTextChanged { text -> if (composeState.value.preview is ComposePreview.VoicePreview && text.toString() != "") editText.setText("") }
@@ -179,8 +186,28 @@ actual fun PlatformTextField(
     it.isFocusable = composeState.value.preview !is ComposePreview.VoicePreview
     it.isFocusableInTouchMode = it.isFocusable
     if (cs.message.text != it.text.toString() || cs.message.selection.start != it.selectionStart || cs.message.selection.end != it.selectionEnd) {
-      it.setText(cs.message.text)
-      it.setSelection(cs.message.selection.start, cs.message.selection.end)
+      // The outer `cs` is captured from the @Composable's body and reflects the snapshot
+      // at composition start. Between then and now, the IME may have committed new text
+      // via doOnTextChanged -> onMessageChange, which writes a NEW composeState value.
+      // The captured `cs` does not reflect that newer value (Compose snapshot semantics).
+      // Re-read composeState.value here to see the freshest state. If it already matches
+      // the EditText, the captured cs was stale -- do nothing, otherwise we'd undo the
+      // IME's commit (e.g. wipe a tapped suggestion or autocorrect-on-space replacement).
+      //
+      // Also guard against an active IME composition: setText/setSelection mid-composition
+      // destroys the composing region and confuses dictionary-based IMEs.
+      val freshCs = composeState.value
+      val freshDiverges = freshCs.message.text != it.text.toString()
+        || freshCs.message.selection.start != it.selectionStart
+        || freshCs.message.selection.end != it.selectionEnd
+      val ed = it.editableText
+      val cStart = android.view.inputmethod.BaseInputConnection.getComposingSpanStart(ed)
+      val cEnd = android.view.inputmethod.BaseInputConnection.getComposingSpanEnd(ed)
+      val isComposing = cStart >= 0 && cEnd >= 0 && cStart != cEnd
+      if (freshDiverges && !isComposing) {
+        it.setText(freshCs.message.text)
+        it.setSelection(freshCs.message.selection.start, freshCs.message.selection.end)
+      }
     }
     if (showKeyboard) {
       it.requestFocus()
