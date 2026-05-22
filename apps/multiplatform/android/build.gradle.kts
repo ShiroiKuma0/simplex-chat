@@ -12,7 +12,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "chat.simplex.app"
+        applicationId = "shiroikuma.simplex"
         namespace = "chat.simplex.app"
         minSdk = 26
         targetSdk = 35
@@ -31,7 +31,7 @@ android {
             }
         }
         manifestPlaceholders["app_name"] = "@string/app_name"
-        manifestPlaceholders["provider_authorities"] = "chat.simplex.app.provider"
+        manifestPlaceholders["provider_authorities"] = "shiroikuma.simplex.provider"
         manifestPlaceholders["extract_native_libs"] = rootProject.extra["compression.level"] as Int != 0
     }
 
@@ -59,6 +59,7 @@ android {
             manifestPlaceholders["provider_authorities"] = "chat.simplex.app${rootProject.extra["application_id.suffix"]}.provider"
         }
         release {
+            manifestPlaceholders["app_name"] = "白い熊 SimpleX"
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -133,9 +134,9 @@ android {
                 isEnable = true
                 reset()
                 if (isRelease) {
-                    include("arm64-v8a", "armeabi-v7a")
+                    include("arm64-v8a")
                 } else {
-                    include("arm64-v8a", "armeabi-v7a")
+                    include("arm64-v8a")
                     isUniversalApk = false
                 }
             }
