@@ -7,7 +7,7 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
-
+apps/multiplatform/android/build.gradle.kts.bak
 .DS_Store
 
 # Haskell
