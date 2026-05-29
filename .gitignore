@@ -89,3 +89,11 @@ apps/android/app/release
 apps/multiplatform/.kotlin/sessions
 # anywhere in the tree: this file holds a real BTCPay api_key and webhook_secret
 badge_service.ini
+
+.claude/settings.local.json
+.claude/*.local.json
+.claude/*.*~
+
+# Claude Code — transient session files (if Claude Code ever drops them in-tree)
+.claude/sessions/
+.claude/.cache/
