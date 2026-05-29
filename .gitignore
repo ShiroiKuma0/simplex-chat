@@ -87,3 +87,10 @@ website/test/stubs-layout-cache/_includes/*.js
 apps/android/app/release
 apps/multiplatform/.kotlin/sessions
 
+.claude/settings.local.json
+.claude/*.local.json
+.claude/*.*~
+
+# Claude Code — transient session files (if Claude Code ever drops them in-tree)
+.claude/sessions/
+.claude/.cache/
