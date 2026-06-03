@@ -12,9 +12,12 @@ Downstream fork of [simplex-chat](https://github.com/simplex-chat/simplex-chat) 
 
 Per-version snapshot tags `shiroikuma-v<UPSTREAM>` mark each built release on `custom`. The base tag is detected dynamically (`git describe --tags --match 'v[0-9]*' --exclude '*armv7a*' --exclude '*beta*' --exclude '*rc*' custom`), so the per-version rebase logic doesn't depend on a fixed commit count.
 
-## Skill
+## Skills
 
-Authoritative project knowledge lives in `.claude/skills/simplex-chat-build/SKILL.md`. Read it first for any task touching this fork — branch model, one-time setup, per-version `git rebase --onto` workflow, build pipeline (lift Haskell `.so` from official APK + gradle release + sign), deploy to `~/tmp/` and `/sdcard/tmp/`, the IME-fix and identity-commit reference diffs, the JDK-21 / Gradle daemon requirements, and the fallback when a rebase gets too tangled.
+Two skills in `.claude/skills/` carry this project's workflow. Read the relevant `SKILL.md` before starting work — they encode hard-won build-environment quirks and gotchas you won't find in the source.
+
+- **`simplex-chat-build`** — the canonical reference for any task touching this fork: branch model, one-time setup, per-version `git rebase --onto` workflow, build pipeline (lift Haskell `.so` from official APK + gradle release + sign), the versioning/bump scheme, deploy to `~/tmp/` and `/sdcard/tmp/`, the IME-fix and identity-commit reference diffs, the JDK-21 / Gradle daemon requirements, and the fallback when a rebase gets too tangled.
+- **`upstream-new-version`** (orchestration over the above) — the `/upstream-new-version` flow: check whether upstream has a newer **stable** release and, if so, fast-forward `master`, rebase the `custom` stack onto the new tag (auto-reconcile small conflicts; **stop and plan with the user** when significant), check whether the IME fix is still needed, then build + deploy the new `+1` via `simplex-chat-build`. Defers all pushing until the user says "push". Read this when the user wants to sync/update to a new upstream release.
 
 ## Quick reference
 
