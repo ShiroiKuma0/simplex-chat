@@ -243,6 +243,12 @@ export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 export PATH="$JAVA_HOME/bin:$PATH"
 export ANDROID_HOME="$HOME/android-sdk"        # local.properties has no sdk.dir; non-interactive shells don't inherit it
 export ANDROID_SDK_ROOT="$HOME/android-sdk"
+# Bump the Gradle daemon heap BEFORE the first ./gradlew call: assembleRelease OOMs at
+# the committed -Xmx2048m while deflating the ~192MB libsimplex.so at compression.level=9
+# (java.lang.OutOfMemoryError in zipflinger Compressor.deflate). Editing it pre-daemon
+# means the daemon born at `./gradlew clean` already carries 6g; the host has ~93GiB RAM.
+# Reverted later with the injected version via `git checkout gradle.properties`.
+sed -i -E 's/-Xmx[0-9]+[mg]/-Xmx6g/' apps/multiplatform/gradle.properties
 java -version  # confirm 21
 ```
 
@@ -299,7 +305,7 @@ sed -i "s/^android.version_code=.*/android.version_code=${custom_vcode}/" apps/m
 
 ```bash
 (cd apps/multiplatform && ./gradlew --stacktrace :android:assembleRelease)
-git checkout apps/multiplatform/gradle.properties   # revert the injected version (keep it out of git)
+git checkout apps/multiplatform/gradle.properties   # revert the injected version + heap bump (keep them out of git)
 grep -E '"versionCode"|"versionName"' apps/multiplatform/android/build/outputs/apk/release/output-metadata.json  # sanity-check the baked version
 
 unsigned_apk="apps/multiplatform/android/build/outputs/apk/release/android-arm64-v8a-release-unsigned.apk"
@@ -348,6 +354,12 @@ java -version
 `|| true` swallows pkill's exit-1 when no daemons are running (normal case). The `sleep 1` lets a daemon mid-task flush before the next gradle command spawns a fresh one.
 
 This matters specifically because the user has multiple JDKs installed (Tuxedo OS defaults to JDK 21 system-wide, but their other build project — the Flutter-based 白い熊の辞書 fork — pins Gradle 7.2 + Zulu 11 at `/usr/lib/jvm/zulu11`). Shell sessions cross-pollinate `JAVA_HOME` and daemons; without the prelude, building SimpleX shortly after that project can silently reuse a Zulu 11 daemon and fail with AGP class-version mismatches.
+
+### Gradle heap: assembleRelease OOMs at the committed `-Xmx2048m`
+
+`apps/multiplatform/gradle.properties` commits `org.gradle.jvmargs=-Xmx2048m`. That is not enough to package a release. `local.properties` sets `compression.level=9`, and zipflinger builds the whole deflated entry in memory — for the ~192MB `libsimplex.so` (the lifted Haskell core) at max compression it throws `java.lang.OutOfMemoryError: Java heap space` in `Compressor.deflate` during `:android:assembleRelease`. A warm daemon inherited from another project with a bigger heap can mask it, so it surfaces intermittently (it bit the 6.5.4+2 build on a cold daemon).
+
+The prelude bumps the heap to `-Xmx6g` **before** the first `./gradlew` call, so the daemon is born with the larger heap. Bumping it *after* `./gradlew clean` doesn't help — the already-started 2g daemon is reused for `assembleRelease` and still OOMs unless you `pkill` and respawn. The host has ~93GiB RAM, so 6g is comfortable. The edit lives in the same `gradle.properties` as the injected build version, so the post-build `git checkout apps/multiplatform/gradle.properties` reverts both — it never lands in git.
 
 ## Deploy: two targets, both required
 
