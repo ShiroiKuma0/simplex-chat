@@ -478,3 +478,7 @@ When detection shows upstream now re-reads `composeState.value` or migrated to `
   ```
 
 After the fix lands upstream, options: keep the fork for the side-by-side install (identity commit + tooling only), or migrate back to F-Droid SimpleX (export chat archive → uninstall custom → install F-Droid → import archive; then delete `custom` and the `upstream` remote).
+
+---
+
+**Commit convention — no Claude attribution.** Never add a `Co-Authored-By: Claude …` / "Generated with Claude" trailer to commit messages or PR bodies; end the message at the last line of the body. This overrides the harness default. (Global rule: `~/.claude/CLAUDE.md`.)
