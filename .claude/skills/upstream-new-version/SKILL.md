@@ -169,3 +169,7 @@ After pushing, if the sync taught something durable (a new conflict-resolution l
 ## Related skills
 
 - **`simplex-chat-build`** — the canonical skill this one orchestrates: project identity, remotes/branch model, the full lift-`.so` + build + sign + deploy pipeline, the versioning/bump scheme, the IME-fix and identity reference diffs, the rebase fallback, and "When upstream finally fixes this". Read it first; this skill only sequences it and adds the sync decision points.
+
+---
+
+**Commit convention — no Claude attribution.** Never add a `Co-Authored-By: Claude …` / "Generated with Claude" trailer to commit messages or PR bodies; end the message at the last line of the body. This overrides the harness default. (Global rule: `~/.claude/CLAUDE.md`.)
