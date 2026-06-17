@@ -33,7 +33,7 @@ body:
 - type: input
   attributes:
     label: App version
-    description: Specify the SimpleX version
+    description: Specify the app version
     placeholder: ex. 4.3.2
   validations:
     required: true
