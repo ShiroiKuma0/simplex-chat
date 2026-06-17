@@ -27,7 +27,7 @@ body:
 - type: input
   attributes:
     label: App version
-    description: Specify the SimpleX version
+    description: Specify the app version
     placeholder: ex. 4.3.2
   validations:
     required: false
@@ -35,6 +35,6 @@ body:
   attributes:
     label: Feature
     description: Describe the feature you would like to see added
-    placeholder: SimpleX Chat should make me coffee! 
+    placeholder: The app should make me coffee!
   validations:
     required: true
