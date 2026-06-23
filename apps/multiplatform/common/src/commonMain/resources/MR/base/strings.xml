@@ -1575,6 +1575,11 @@
   <string name="settings_section_title_message_shape">Message shape</string>
   <string name="settings_message_shape_corner">Corner</string>
   <string name="settings_message_shape_tail">Tail</string>
+  <string name="settings_section_title_message_ticks">Message ticks</string>
+  <string name="settings_message_ticks_size">Size</string>
+  <string name="settings_message_ticks_thickness">Thickness</string>
+  <string name="settings_message_ticks_sent_color">Sent tick (single)</string>
+  <string name="settings_message_ticks_received_color">Received tick (double)</string>
   <string name="settings_section_title_chat_theme">Chat theme</string>
   <string name="settings_section_title_user_theme">Profile theme</string>
   <string name="settings_section_title_chat_colors">Chat colors</string>
