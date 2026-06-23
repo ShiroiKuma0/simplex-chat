@@ -123,6 +123,9 @@ fun AppearanceScope.AppearanceLayout(
     MessageShapeSection()
 
     SectionDividerSpaced()
+    MessageTicksSection()
+
+    SectionDividerSpaced()
     ProfileImageSection()
 
     SectionDividerSpaced()
