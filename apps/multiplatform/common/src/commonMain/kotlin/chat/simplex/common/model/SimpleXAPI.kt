@@ -241,6 +241,14 @@ class AppPreferences {
   val profileImageCornerRadius = mkFloatPreference(SHARED_PREFS_PROFILE_IMAGE_CORNER_RADIUS, 22.5f)
   val chatItemRoundness = mkFloatPreference(SHARED_PREFS_CHAT_ITEM_ROUNDNESS, 0.75f)
   val chatItemTail = mkBoolPreference(SHARED_PREFS_CHAT_ITEM_TAIL, true)
+  // downstream (shiroikuma): size of the sent/received delivery ticks, and their colors.
+  // messageTickScale multiplies the base 17.dp tick height. Colors are readable-hex strings;
+  // sent defaults to light blue, received is null = follow the theme meta color (yellow on this fork).
+  val messageTickScale = mkFloatPreference(SHARED_PREFS_MESSAGE_TICK_SCALE, 2f)
+  // extra stroke thickness (in dp, scaled with the tick size) drawn as a dilation around the ticks; 0 = stock
+  val messageTickThickness = mkFloatPreference(SHARED_PREFS_MESSAGE_TICK_THICKNESS, 0f)
+  val messageTickSentColor = mkStrPreference(SHARED_PREFS_MESSAGE_TICK_SENT_COLOR, DEFAULT_MESSAGE_TICK_SENT_COLOR)
+  val messageTickReceivedColor = mkStrPreference(SHARED_PREFS_MESSAGE_TICK_RECEIVED_COLOR, null)
   val fontScale = mkFloatPreference(SHARED_PREFS_FONT_SCALE, 1f)
   val densityScale = mkFloatPreference(SHARED_PREFS_DENSITY_SCALE, 1f)
   val inAppBarsDefaultAlpha = if (deviceSupportsBlur) 0.875f else 0.975f
@@ -490,6 +498,11 @@ class AppPreferences {
     private const val SHARED_PREFS_PROFILE_IMAGE_CORNER_RADIUS = "ProfileImageCornerRadius"
     private const val SHARED_PREFS_CHAT_ITEM_ROUNDNESS = "ChatItemRoundness"
     private const val SHARED_PREFS_CHAT_ITEM_TAIL = "ChatItemTail"
+    private const val SHARED_PREFS_MESSAGE_TICK_SCALE = "MessageTickScale"
+    private const val SHARED_PREFS_MESSAGE_TICK_THICKNESS = "MessageTickThickness"
+    private const val SHARED_PREFS_MESSAGE_TICK_SENT_COLOR = "MessageTickSentColor"
+    private const val SHARED_PREFS_MESSAGE_TICK_RECEIVED_COLOR = "MessageTickReceivedColor"
+    const val DEFAULT_MESSAGE_TICK_SENT_COLOR = "#ff4fc3f7"
     private const val SHARED_PREFS_FONT_SCALE = "FontScale"
     private const val SHARED_PREFS_DENSITY_SCALE = "DensityScale"
     private const val SHARED_PREFS_IN_APP_BARS_ALPHA = "InAppBarsAlpha"

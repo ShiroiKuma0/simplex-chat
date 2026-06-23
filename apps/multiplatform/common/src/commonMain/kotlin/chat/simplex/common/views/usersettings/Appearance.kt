@@ -8,6 +8,7 @@ import SectionItemView
 import itemHPadding
 import SectionItemViewSpaceBetween
 import SectionItemViewWithoutMinPadding
+import SectionSpacer
 import SectionView
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -38,7 +39,9 @@ import chat.simplex.common.model.ChatModel.controller
 import chat.simplex.common.platform.*
 import chat.simplex.common.ui.theme.ThemeManager.colorFromReadableHex
 import chat.simplex.common.ui.theme.ThemeManager.toReadableHex
+import chat.simplex.common.views.chat.item.BASE_TICK_HEIGHT_DP
 import chat.simplex.common.views.chat.item.PreviewChatItemView
+import chat.simplex.common.views.chat.item.TickIcon
 import chat.simplex.common.views.chat.item.msgTailWidthDp
 import chat.simplex.res.MR
 import com.godaddy.android.colorpicker.ClassicColorPicker
@@ -204,6 +207,142 @@ object AppearanceScope {
           SettingsPreferenceItem(icon = null, stringResource(MR.strings.settings_message_shape_tail), appPreferences.chatItemTail)
         }
       }
+    }
+  }
+
+  // downstream (shiroikuma): configure the size and colors of the sent/received delivery ticks
+  @Composable
+  fun MessageTicksSection() {
+    val tickScale = remember { appPrefs.messageTickScale.state }
+    val tickThickness = remember { appPrefs.messageTickThickness.state }
+    val sentColorPref = remember { appPrefs.messageTickSentColor.state }
+    val rcvdColorPref = remember { appPrefs.messageTickReceivedColor.state }
+    val sentColor = sentColorPref.value?.colorFromReadableHex() ?: MaterialTheme.colors.secondary
+    val rcvdColor = rcvdColorPref.value?.colorFromReadableHex() ?: MaterialTheme.colors.secondary
+    BoxWithConstraints {
+      val sliderWidth = Modifier.widthIn(max = (this@BoxWithConstraints.maxWidth - DEFAULT_PADDING * 2) * 0.618f)
+      SectionView(stringResource(MR.strings.settings_section_title_message_ticks).uppercase()) {
+        SectionItemViewWithoutMinPadding {
+          Text(stringResource(MR.strings.settings_message_ticks_size), Modifier.weight(1f))
+          Spacer(Modifier.width(10.dp))
+          Slider(
+            tickScale.value,
+            onValueChange = {
+              val diff = it % 0.1f
+              appPrefs.messageTickScale.set(it + (if (diff >= 0.05f) -diff + 0.1f else -diff))
+            },
+            sliderWidth,
+            valueRange = 1f..15f,
+            steps = 139,
+            colors = SliderDefaults.colors(
+              activeTickColor = Color.Transparent,
+              inactiveTickColor = Color.Transparent,
+            )
+          )
+        }
+        SectionItemViewWithoutMinPadding {
+          Text(stringResource(MR.strings.settings_message_ticks_thickness), Modifier.weight(1f))
+          Spacer(Modifier.width(10.dp))
+          Slider(
+            tickThickness.value,
+            onValueChange = {
+              val diff = it % 0.1f
+              appPrefs.messageTickThickness.set(it + (if (diff >= 0.05f) -diff + 0.1f else -diff))
+            },
+            sliderWidth,
+            valueRange = 0f..4f,
+            steps = 39,
+            colors = SliderDefaults.colors(
+              activeTickColor = Color.Transparent,
+              inactiveTickColor = Color.Transparent,
+            )
+          )
+        }
+        // the color rows double as a live preview of the chosen thickness and color; size is capped here so
+        // the settings rows stay usable at large scales (the real chat ticks use the full scale)
+        val previewScale = minOf(tickScale.value, 3f)
+        SectionItemViewSpaceBetween({ editTickColor(received = false) }) {
+          Text(stringResource(MR.strings.settings_message_ticks_sent_color))
+          TickIcon(double = false, color = sentColor, sizeDp = BASE_TICK_HEIGHT_DP * previewScale, thickness = tickThickness.value)
+        }
+        SectionItemViewSpaceBetween({ editTickColor(received = true) }) {
+          Text(stringResource(MR.strings.settings_message_ticks_received_color))
+          TickIcon(double = true, color = rcvdColor, sizeDp = BASE_TICK_HEIGHT_DP * previewScale, thickness = tickThickness.value)
+        }
+      }
+    }
+  }
+
+  fun editTickColor(received: Boolean) {
+    ModalManager.start.showModal {
+      val pref = if (received) appPrefs.messageTickReceivedColor else appPrefs.messageTickSentColor
+      val themeDefault = MaterialTheme.colors.secondary
+      val current = pref.get()?.colorFromReadableHex() ?: themeDefault
+      TickColorEditor(
+        title = stringResource(if (received) MR.strings.settings_message_ticks_received_color else MR.strings.settings_message_ticks_sent_color),
+        initialColor = current,
+        defaultColor = if (received) themeDefault else AppPreferences.DEFAULT_MESSAGE_TICK_SENT_COLOR.colorFromReadableHex(),
+        onColorChange = { pref.set(it.toReadableHex()) },
+        onReset = { pref.set(if (received) null else AppPreferences.DEFAULT_MESSAGE_TICK_SENT_COLOR) }
+      )
+    }
+  }
+
+  @Composable
+  fun TickColorEditor(
+    title: String,
+    initialColor: Color,
+    defaultColor: Color,
+    onColorChange: (Color) -> Unit,
+    onReset: () -> Unit,
+  ) {
+    ColumnWithScrollBar(Modifier.imePadding()) {
+      AppBarTitle(title)
+      var currentColor by remember { mutableStateOf(initialColor) }
+      val togglePicker = remember { mutableStateOf(false) }
+      Box(Modifier.padding(horizontal = DEFAULT_PADDING)) {
+        if (togglePicker.value) {
+          ColorPicker(currentColor, showAlphaBar = false) { currentColor = it; onColorChange(it) }
+        } else {
+          ColorPicker(currentColor, showAlphaBar = false) { currentColor = it; onColorChange(it) }
+        }
+      }
+      val clipboard = LocalClipboardManager.current
+      val hexTrimmed = currentColor.toReadableHex().replaceFirst("#ff", "#")
+      Row(Modifier.fillMaxWidth().padding(start = DEFAULT_PADDING_HALF, end = DEFAULT_PADDING), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+        val textFieldState = remember { mutableStateOf(TextFieldValue(hexTrimmed)) }
+        KeyChangeEffect(hexTrimmed) {
+          textFieldState.value = textFieldState.value.copy(hexTrimmed)
+        }
+        DefaultBasicTextField(
+          Modifier.fillMaxWidth(),
+          textFieldState,
+          leadingIcon = {
+            IconButton(onClick = { clipboard.shareText(hexTrimmed) }) {
+              Icon(painterResource(MR.images.ic_content_copy), generalGetString(MR.strings.copy_verb), Modifier.size(26.dp), tint = MaterialTheme.colors.primary)
+            }
+          },
+          onValueChange = { value ->
+            val color = value.text.trim('#', ' ')
+            if (color.length == 6 || color.length == 8) {
+              currentColor = if (color.length == 6) ("ff$color").colorFromReadableHex() else color.colorFromReadableHex()
+              onColorChange(currentColor)
+              textFieldState.value = value.copy(currentColor.toReadableHex().replaceFirst("#ff", "#"))
+              togglePicker.value = !togglePicker.value
+            } else {
+              textFieldState.value = value
+            }
+          }
+        )
+      }
+      SectionItemView({
+        currentColor = defaultColor
+        onReset()
+        togglePicker.value = !togglePicker.value
+      }) {
+        Text(generalGetString(MR.strings.reset_single_color), color = colors.primary)
+      }
+      SectionSpacer()
     }
   }
 
