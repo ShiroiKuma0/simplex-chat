@@ -142,7 +142,7 @@ Pause and confirm with the user before kicking off the build (it's 3–8 min). O
 
 ## Step 6 — Deploy, then stop and let the user test
 
-Deploy per the build skill's **"Deploy"** section: `adb push` to `/sdcard/tmp/$apk_name` first (device is the build that matters and the durable bump archive), then `cp` to `~/tmp/$apk_name` as backup. Never `adb install`. If the cable's absent, keep the `~/tmp/` copy and report the adb failure — don't abort.
+Deploy per the build skill's **"Deploy"** section: `cp` to `~/tmp/$apk_name` first (the backup every delivery keys off), then invoke the global `/after-build` skill — `/adb-check` UNSANDBOXED, then `/adb-push` to `/sdcard/tmp/` if the phone is connected, else `/scp` to skhw, announcing the filename. Never `adb install`, and never prompt "is the phone connected?" — `/adb-check` answers it. If no device, `/after-build` falls back to `/scp`; the `~/tmp/` copy is also there to sideload manually — don't abort.
 
 Then **stop**. The user installs over the previous fork build (same keystore → in-place update, no uninstall) and verifies the customizations on the new base. They may report regressions from the upstream bump → iterate locally (more edits, rebuild a higher `+N`) — still no push. Report the build + deploy result and wait.
 

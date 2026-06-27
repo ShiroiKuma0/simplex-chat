@@ -361,16 +361,14 @@ This matters specifically because the user has multiple JDKs installed (Tuxedo O
 
 The prelude bumps the heap to `-Xmx6g` **before** the first `./gradlew` call, so the daemon is born with the larger heap. Bumping it *after* `./gradlew clean` doesn't help — the already-started 2g daemon is reused for `assembleRelease` and still OOMs unless you `pkill` and respawn. The host has ~93GiB RAM, so 6g is comfortable. The edit lives in the same `gradle.properties` as the injected build version, so the post-build `git checkout apps/multiplatform/gradle.properties` reverts both — it never lands in git.
 
-## Deploy: two targets, both required
+## Deploy: copy to `~/tmp/`, then `/after-build`
 
-Every successful build deploys to two places, in this fixed order:
+Every successful build delivers in two steps, in this fixed order:
 
-1. **On-device first** via `adb shell mkdir -p /sdcard/tmp && adb push /tmp/sx-signed.apk "/sdcard/tmp/$apk_name"` (`apk_name` from "Versioning", e.g. `shiroikuma-simplex_6.5.3+1_arm64-v8a.apk`). The user installs from `/sdcard/tmp/` via the phone's file manager.
-2. **Local backup second** via `cp /tmp/sx-signed.apk ~/tmp/"$apk_name"` for archival.
+1. **Local backup first** via `cp /tmp/sx-signed.apk ~/tmp/"$apk_name"` (`apk_name` from "Versioning", e.g. `shiroikuma-simplex_6.5.3+1_arm64-v8a.apk`) — this is the backup every delivery keys off, so it always happens.
+2. **Deliver via the global `/after-build` skill**: it runs `/adb-check` UNSANDBOXED, then `/adb-push` to `/sdcard/tmp/` if the phone is connected (the user installs from `/sdcard/tmp/` via the phone's file manager), else `/scp` to skhw — announcing the filename, without asking. Never prompt "is the phone connected?" — `/adb-check` answers it. Never use `adb install` instead of `adb push` — the user wants the APK file landing on device storage to install via the file manager.
 
-Device first because that's the deployment that actually matters — the user wants to test the new build now; local backup is hygiene. Never use `adb install` instead of `adb push` — the user wants the APK file landing on device storage to install via the file manager.
-
-If `adb push` fails (no device connected, USB debugging off, device unauthorized): the local copy in `~/tmp/` is the fallback — transfer via KDE Connect / Bluetooth / file copy. Don't abort the build on a missing-cable moment; just keep the local copy and report the adb failure.
+Local copy first because it's the fixed artifact `/after-build` reads. If no device is connected, `/after-build` falls back to `/scp` to skhw automatically; the `~/tmp/` copy is also there to transfer via KDE Connect / Bluetooth / file copy. Don't abort the build on a missing-cable moment.
 
 Updates over an existing custom build install cleanly without uninstall (same keystore). **Never** install over the F-Droid official SimpleX — different signing keys, Android refuses. They coexist because `applicationId` differs.
 
