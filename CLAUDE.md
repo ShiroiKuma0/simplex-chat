@@ -10,14 +10,14 @@ Downstream fork of [simplex-chat](https://github.com/simplex-chat/simplex-chat) 
   2. `android: fix IME-commit race in PlatformTextField` — fixes Multiling O / Czech autocorrect-on-space / CJK dictionary commits being wiped by a Compose snapshot race.
   3. `android: shiroikuma.simplex fork identity` — applicationId, provider authority, app name, ABI splits.
 
-Per-version snapshot tags `shiroikuma-v<UPSTREAM>` mark each built release on `custom`. The base tag is detected dynamically (`git describe --tags --match 'v[0-9]*' --exclude '*armv7a*' --exclude '*beta*' --exclude '*rc*' custom`), so the per-version rebase logic doesn't depend on a fixed commit count.
+Per-version snapshot tags `shiroikuma-v<UPSTREAM>` mark each built release on `custom`. The fork tracks the **newest upstream release tag, betas/rc included** (only `armv7a` platform variants are excluded); `master` still mirrors `stable` only. The base tag is detected dynamically (`git describe --tags --match 'v[0-9]*' --exclude '*armv7a*' custom`), so the per-version rebase logic doesn't depend on a fixed commit count.
 
 ## Skills
 
 Two skills in `.claude/skills/` carry this project's workflow. Read the relevant `SKILL.md` before starting work — they encode hard-won build-environment quirks and gotchas you won't find in the source.
 
 - **`simplex-chat-build`** — the canonical reference for any task touching this fork: branch model, one-time setup, per-version `git rebase --onto` workflow, build pipeline (lift Haskell `.so` from official APK + gradle release + sign), the versioning/bump scheme, deploy to `~/tmp/` and `/sdcard/tmp/`, the IME-fix and identity-commit reference diffs, the JDK-21 / Gradle daemon requirements, and the fallback when a rebase gets too tangled.
-- **`upstream-new-version`** (orchestration over the above) — the `/upstream-new-version` flow: check whether upstream has a newer **stable** release and, if so, fast-forward `master`, rebase the `custom` stack onto the new tag (auto-reconcile small conflicts; **stop and plan with the user** when significant), check whether the IME fix is still needed, then build + deploy the new `+1` via `simplex-chat-build`. Defers all pushing until the user says "push". Read this when the user wants to sync/update to a new upstream release.
+- **`upstream-new-version`** (orchestration over the above) — the `/upstream-new-version` flow: check whether upstream has a newer release (**newest tag by version order, betas/rc included**) and, if so, fast-forward `master`, rebase the `custom` stack onto the new tag (auto-reconcile small conflicts; **stop and plan with the user** when significant), check whether the IME fix is still needed, then build + deploy the new `+1` via `simplex-chat-build`. Defers all pushing until the user says "push". Read this when the user wants to sync/update to a new upstream release.
 
 ## Quick reference
 
