@@ -167,10 +167,16 @@ When upstream releases a new version, advance the mirror and rebase `custom` ont
 git fetch --tags upstream
 git fetch origin
 
-new_tag=$(git tag --list 'v*' --sort=-v:refname | grep -vE 'armv7a|beta|rc' | head -1)
+# newest release tag, beta/rc INCLUDED (the fork tracks the latest release, not just stable);
+# versionsort.suffix=- ranks v7.0.0-beta.2 BELOW v7.0.0 so the final supersedes its betas.
+new_tag=$(git -c versionsort.suffix=- tag --list 'v*' --sort=-v:refname | grep -v armv7a | head -1)
 old_tag=$(git describe --tags --abbrev=0 \
-  --match 'v[0-9]*' --exclude '*armv7a*' --exclude '*beta*' --exclude '*rc*' \
+  --match 'v[0-9]*' --exclude '*armv7a*' \
   custom)
+# guard: old_tag must be an ancestor of custom (upstream force-pushes stable and can orphan
+# the base — describe then returns a far-too-old tag; if so, use the parent of the first
+# downstream commit as old_tag)
+git merge-base --is-ancestor "$old_tag" custom || echo "WARNING: base orphaned, find it manually"
 
 # Detection: does the new upstream still have the bug?
 git show "$new_tag:apps/multiplatform/common/src/androidMain/kotlin/chat/simplex/common/platform/PlatformTextField.android.kt" \

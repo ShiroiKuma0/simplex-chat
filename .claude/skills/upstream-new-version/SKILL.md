@@ -1,6 +1,6 @@
 ---
 name: upstream-new-version
-description: Sync the shiroikuma.simplex fork to a new upstream release of simplex-chat/simplex-chat — fast-forward `master`, rebase the `custom` commit stack onto the new release tag (reconciling small conflicts in place, stopping to plan with the user when they're significant), check whether the IME-commit-race fix is still needed, then build + deploy the new `+1` signed APK per the simplex-chat-build skill. Use this skill whenever the user runs /upstream-new-version, or asks to "check for a new SimpleX version", "sync to the latest upstream", "update/rebase to the new release", "rebase custom onto the new tag", or otherwise wants the fork brought up to a newer upstream release. This is the orchestration layer on top of simplex-chat-build — read that skill for every concrete fact (remotes, versioning, the build/sign/deploy pipeline, the IME-fix and identity reference diffs, the rebase fallback) this one sequences.
+description: Sync the shiroikuma.simplex fork to a new upstream release of simplex-chat/simplex-chat — the newest release tag by version order, betas/rc included — fast-forward `master`, rebase the `custom` commit stack onto the new release tag (reconciling small conflicts in place, stopping to plan with the user when they're significant), check whether the IME-commit-race fix is still needed, then build + deploy the new `+1` signed APK per the simplex-chat-build skill. Use this skill whenever the user runs /upstream-new-version, or asks to "check for a new SimpleX version", "sync to the latest upstream", "update/rebase to the new release", "rebase custom onto the new tag", or otherwise wants the fork brought up to a newer upstream release. This is the orchestration layer on top of simplex-chat-build — read that skill for every concrete fact (remotes, versioning, the build/sign/deploy pipeline, the IME-fix and identity reference diffs, the rebase fallback) this one sequences.
 ---
 
 # Sync the SimpleX Chat fork to a new upstream release
@@ -9,7 +9,7 @@ One-command upstream sync for the user's `shiroikuma.simplex` fork: **check → 
 
 This is the **orchestration layer**. Every concrete fact — remotes, branch model, the version-bump scheme, the lifted-`.so` build pipeline, the IME-fix and identity reference diffs, the rebase fallback, the deploy targets — lives in the **`simplex-chat-build`** skill. **Read it before running this**, especially its "Per-version update", "Versioning", "Build", and "Deploy" sections. This skill sequences those pieces and adds the simplex-specific decision points: *is the IME fix still needed, and are the rebase conflicts small enough to auto-resolve or significant enough to stop and plan?*
 
-> **SimpleX tracks stable only.** `master` mirrors upstream's default branch (`stable`); the rebase target is the newest **stable** release tag (`vX.Y.Z`), never a `beta`/`rc`/`armv7a` tag. Unlike the keyboard fork, do **not** sync onto pre-releases.
+> **SimpleX tracks the newest release — betas included.** The rebase target is the newest upstream release tag by version order — `beta`/`rc` pre-releases count (only `armv7a` platform-variant tags are excluded). A pre-release ranks *below* its final release (`v7.0.0-beta.2` < `v7.0.0`), so when the final lands the next sync moves onto it. `master` still mirrors upstream's default branch (`stable`) and never fast-forwards to a pre-release; when the rebase target is a beta, `custom`'s base simply runs ahead of `master` — expected.
 
 ## The one discipline that overrides everything: don't push until the user says "push"
 
@@ -23,37 +23,47 @@ Also unconditional, from CLAUDE.md / the build skill: never `adb install` (deplo
 - Working tree clean (`git status --short` empty). If dirty, surface it and ask before proceeding — uncommitted scratch work would be swept into the rebase. (The lifted `.so` libs under `apps/multiplatform/common/src/commonMain/cpp/android/libs/` are gitignored, so they won't show as dirty.)
 - On (or able to check out) `custom`.
 
-## Step 1 — Check upstream for a new stable release
+## Step 1 — Check upstream for a new release (betas included)
 
 ```bash
 cd ~/git/shiroikuma-simplex
 git fetch --tags upstream
 git fetch origin            # so origin/master, origin/custom, and origin tags are current for later
 
-# newest STABLE upstream tag (drop armv7a / beta / rc)
-new_tag=$(git tag --list 'v*' --sort=-v:refname | grep -vE 'armv7a|beta|rc' | head -1)
+# newest upstream release tag — beta/rc INCLUDED, only armv7a platform variants dropped.
+# versionsort.suffix=- is essential: it makes suffixed tags rank as PRE-releases
+# (v7.0.0-beta.2 < v7.0.0). Without it git ranks the beta ABOVE the final release,
+# and the sync would stay stuck on the beta after the final ships.
+new_tag=$(git -c versionsort.suffix=- tag --list 'v*' --sort=-v:refname | grep -v armv7a | head -1)
 
-# the upstream tag custom is currently rebased onto
+# the upstream tag custom is currently rebased onto (may itself be a beta)
 old_tag=$(git describe --tags --abbrev=0 \
-  --match 'v[0-9]*' --exclude '*armv7a*' --exclude '*beta*' --exclude '*rc*' \
+  --match 'v[0-9]*' --exclude '*armv7a*' \
   custom)
 
 echo "custom is based on:        $old_tag"
-echo "newest upstream stable:    $new_tag"
+echo "newest upstream release:   $new_tag"
+
+# GUARD: old_tag must be an ancestor of custom. Upstream force-pushes its stable
+# lineage between releases, which can orphan our base — git describe then returns a
+# far-too-old tag and the rebase would replay hundreds of upstream commits.
+git merge-base --is-ancestor "$old_tag" custom \
+  && echo "base OK" \
+  || echo "WARNING: $old_tag is NOT an ancestor — upstream rewrote history; use the parent of the first downstream commit (git log custom) as old_tag"
 ```
 
-- **`new_tag == old_tag`** → already on the newest upstream stable tag. Report it ("custom is on `v6.5.3`, the newest upstream stable — nothing to sync") and **stop**.
+- **`new_tag == old_tag`** → already on the newest upstream release. Report it ("custom is on `v6.5.6`, the newest upstream release — nothing to sync") and **stop**.
 - **`new_tag` newer than `old_tag`** → continue. First show the user what's coming and the replay count:
   ```bash
   git log --oneline "$old_tag".."$new_tag" | head -50
   git rev-list --count "$old_tag"..custom    # number of our commits to replay (IME fix + identity + tooling)
   ```
 
-(`--sort=-v:refname` orders semver tags correctly; the `grep -vE` keeps this to real stable releases. If a tag's nature is unclear, check the GitHub releases page or ask.)
+(With `versionsort.suffix=-`, `--sort=-v:refname` orders pre-releases correctly below their finals. The rebase moves forward along the version order — beta → newer beta → final — one target per sync. If a tag's nature is unclear, check the GitHub releases page or ask.)
 
 ## Step 2 — Fast-forward `master` (local only; push deferred to "push")
 
-`master` is a pure mirror of upstream's default branch (`stable`), fast-forward only, never carries our changes.
+`master` is a pure mirror of upstream's default branch (`stable`), fast-forward only, never carries our changes. When the rebase target is a `beta`/`rc` tag, that tag usually isn't on `stable` yet — the fast-forward is then a no-op (or advances less far than `custom`'s base); both are fine, since `custom` sits on the *tag*, not on `master`.
 
 ```bash
 upstream_head=$(git remote show upstream | sed -n 's/.*HEAD branch: //p')
@@ -136,7 +146,7 @@ Expect the identity grep to hit `applicationId = "shiroikuma.simplex"`, `app_nam
 
 Run the **simplex-chat-build** "Build" pipeline against `$new_tag`: the JDK-21 + Gradle-daemon-flush prelude, lift the Haskell `.so` libs **from the new release's `simplex.apk`** (use `$new_tag` in the release-download URL), write `local.properties`, clean (`./gradlew clean` + `rm -rf` the `build`/`.cxx` dirs), then the "Set the custom build version" step → assemble → revert `gradle.properties` → zipalign → apksigner → verify.
 
-The version is **`<new upstream>+1`** automatically: the build skill's bump detection scans the device + `~/tmp` for prior APKs of *this* upstream version, finds none for a brand-new release, and so resolves `bump=1` (e.g. upstream `6.5.4` → `versionName 6.5.4+1`, `versionCode 3520001`, `shiroikuma-simplex_6.5.4+1_arm64-v8a.apk`). No manual reset needed.
+The version is **`<new upstream>+1`** automatically: the build skill's bump detection scans the device + `~/tmp` for prior APKs of *this* upstream version, finds none for a brand-new release, and so resolves `bump=1` (e.g. upstream `6.5.4` → `versionName 6.5.4+1`, `versionCode 3520001`, `shiroikuma-simplex_6.5.4+1_arm64-v8a.apk`). No manual reset needed. For a beta target the upstream `versionName` carries the suffix and ours stacks on it (e.g. `7.0.0-beta.2` → `7.0.0-beta.2+1`); the `versionCode` scheme is unchanged (upstream code × 10000 + bump), so the later final release still installs over the beta build.
 
 Pause and confirm with the user before kicking off the build (it's 3–8 min). On `BUILD FAILED`, capture the stacktrace and share it before retrying — and if the failure stems from the rebase (not a transient flake or a toolchain bump), treat it like a significant conflict: diagnose and replan rather than patching blindly.
 
