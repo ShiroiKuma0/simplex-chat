@@ -3,12 +3,14 @@ package chat.simplex.common.views.chat.item
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import dev.icerock.moko.resources.compose.painterResource
 import dev.icerock.moko.resources.compose.stringResource
 import androidx.compose.ui.unit.dp
+import chat.simplex.common.platform.appPreferences
 import chat.simplex.common.ui.theme.*
 import chat.simplex.common.model.*
 import chat.simplex.common.views.helpers.SimpleButton
@@ -29,20 +31,24 @@ fun CICallItemView(
     Modifier
       .padding(horizontal = 4.dp)
       .padding(bottom = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-    @Composable fun ConnectingCallIcon() = Icon(painterResource(MR.images.ic_settings_phone), stringResource(MR.strings.icon_descr_call_connecting), tint = SimplexGreen)
+    // downstream (shiroikuma): call icons scale with the callIconScale pref (default 2x),
+    // settable on the 白い熊 Simplex UI page
+    val callIconSize = 24.dp * remember { appPreferences.callIconScale.state }.value
+    val callIconModifier = Modifier.size(callIconSize)
+    @Composable fun ConnectingCallIcon() = Icon(painterResource(MR.images.ic_settings_phone), stringResource(MR.strings.icon_descr_call_connecting), tint = SimplexGreen, modifier = callIconModifier)
     when (status) {
       CICallStatus.Pending -> if (sent) {
-        Icon(painterResource(MR.images.ic_call), stringResource(MR.strings.icon_descr_call_pending_sent))
+        Icon(painterResource(MR.images.ic_call), stringResource(MR.strings.icon_descr_call_pending_sent), modifier = callIconModifier)
       } else {
         AcceptCallButton(cInfo, acceptCall)
       }
-      CICallStatus.Missed -> Icon(painterResource(MR.images.ic_call), stringResource(MR.strings.icon_descr_call_missed), tint = Color.Red)
-      CICallStatus.Rejected -> Icon(painterResource(MR.images.ic_call_end), stringResource(MR.strings.icon_descr_call_rejected), tint = Color.Red)
+      CICallStatus.Missed -> Icon(painterResource(MR.images.ic_call), stringResource(MR.strings.icon_descr_call_missed), tint = Color.Red, modifier = callIconModifier)
+      CICallStatus.Rejected -> Icon(painterResource(MR.images.ic_call_end), stringResource(MR.strings.icon_descr_call_rejected), tint = Color.Red, modifier = callIconModifier)
       CICallStatus.Accepted -> ConnectingCallIcon()
       CICallStatus.Negotiated -> ConnectingCallIcon()
-      CICallStatus.Progress -> Icon(painterResource(MR.images.ic_phone_in_talk_filled), stringResource(MR.strings.icon_descr_call_progress), tint = SimplexGreen)
-      CICallStatus.Ended -> Row {
-        Icon(painterResource(MR.images.ic_call_end), stringResource(MR.strings.icon_descr_call_ended), tint = MaterialTheme.colors.secondary, modifier = Modifier.padding(end = 4.dp))
+      CICallStatus.Progress -> Icon(painterResource(MR.images.ic_phone_in_talk_filled), stringResource(MR.strings.icon_descr_call_progress), tint = SimplexGreen, modifier = callIconModifier)
+      CICallStatus.Ended -> Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(MR.images.ic_call_end), stringResource(MR.strings.icon_descr_call_ended), tint = MaterialTheme.colors.secondary, modifier = Modifier.padding(end = 4.dp).size(callIconSize))
         Text(durationText(duration), color = MaterialTheme.colors.secondary)
       }
       CICallStatus.Error -> {}
