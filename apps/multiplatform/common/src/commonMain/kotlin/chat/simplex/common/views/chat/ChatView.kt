@@ -7,6 +7,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
@@ -24,6 +25,7 @@ import dev.icerock.moko.resources.compose.stringResource
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.style.TextAlign
@@ -44,6 +46,7 @@ import chat.simplex.common.platform.*
 import chat.simplex.common.platform.AudioPlayer
 import chat.simplex.common.views.newchat.ContactConnectionInfoView
 import chat.simplex.common.views.newchat.alertProfileImageSize
+import chat.simplex.common.views.usersettings.showShiroikumaUIModal
 import chat.simplex.res.MR
 import dev.icerock.moko.resources.ImageResource
 import dev.icerock.moko.resources.StringResource
@@ -1401,7 +1404,14 @@ fun BoxScope.ChatInfoToolbar(
 
   if (menuItems.isNotEmpty()) {
     barButtons.add {
-      IconButton({ showMenu.value = true }) {
+      // downstream (shiroikuma): long-pressing the chat menu button opens the 白い熊 Simplex UI page
+      Box(
+        Modifier
+          .size(48.dp)
+          .clip(CircleShape)
+          .combinedClickable(onClick = { showMenu.value = true }, onLongClick = { showShiroikumaUIModal() }),
+        contentAlignment = Alignment.Center
+      ) {
         Icon(MoreVertFilled, stringResource(MR.strings.icon_descr_more_button), tint = MaterialTheme.colors.primary)
       }
     }
@@ -2071,7 +2081,10 @@ fun BoxScope.ChatItemsList(
                       }
                     }
                   }
-                  if (cItem.content.showMemberName) {
+                  // downstream (shiroikuma): the sender name now lives at the bottom center of the
+                  // bubble (FramedItemView.SenderNameRow), so the name+role header above the bubble
+                  // is not rendered. Keep MemberNameAndRole around for easy revert/upstream rebases.
+                  if (false && cItem.content.showMemberName) {
                     DependentLayout(Modifier, CHAT_BUBBLE_LAYOUT_ID) {
                       MemberNameAndRole(range)
                       Item()
@@ -3037,11 +3050,15 @@ private fun ButtonRow(horizontalArrangement: Arrangement.Horizontal, content: @C
 
 @Composable
 private fun DateSeparator(date: Instant) {
+  // downstream (shiroikuma): bold + underlined date headers, settable on the 白い熊 Simplex UI page
+  val dateBold = remember { appPrefs.chatDateBold.state }.value
+  val dateUnderline = remember { appPrefs.chatDateUnderline.state }.value
   Text(
     text = getTimestampDateText(date),
     Modifier.padding(vertical = DEFAULT_PADDING_HALF + 4.dp, horizontal = DEFAULT_PADDING_HALF).fillMaxWidth(),
     fontSize = 14.sp,
-    fontWeight = FontWeight.Medium,
+    fontWeight = if (dateBold) FontWeight.Bold else FontWeight.Medium,
+    textDecoration = if (dateUnderline) TextDecoration.Underline else null,
     textAlign = TextAlign.Center,
     color = MaterialTheme.colors.secondary
   )

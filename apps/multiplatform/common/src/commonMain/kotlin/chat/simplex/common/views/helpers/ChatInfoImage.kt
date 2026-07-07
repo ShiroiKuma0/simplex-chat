@@ -76,6 +76,20 @@ fun ProfileImage(
 ) {
   Box(Modifier.size(size)) {
     if (image == null) {
+      // downstream (shiroikuma): contacts/members without a profile image get the 人 placeholder
+      // (same asset as in shiroikuma-renrakusaki) instead of the stock person-in-circle icon.
+      if (icon == MR.images.ic_account_circle_filled) {
+        if (backgroundColor != null) {
+          Box(Modifier.size(size * 0.7f).align(Alignment.Center).background(backgroundColor, CircleShape))
+        }
+        Image(
+          painterResource(MR.images.shiroikuma_hito),
+          contentDescription = stringResource(MR.strings.icon_descr_profile_image_placeholder),
+          contentScale = ContentScale.Fit,
+          modifier = Modifier.fillMaxSize().padding(size / 9)
+        )
+        return@Box
+      }
       val iconToReplace = when (icon) {
         MR.images.ic_account_circle_filled -> AccountCircleFilled
         MR.images.ic_supervised_user_circle_filled -> SupervisedUserCircleFilled

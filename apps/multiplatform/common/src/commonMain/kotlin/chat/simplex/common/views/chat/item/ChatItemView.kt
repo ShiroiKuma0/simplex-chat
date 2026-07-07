@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.*
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -1244,6 +1245,34 @@ fun Modifier.clipChatItem(chatItem: ChatItem? = null, tailVisible: Boolean = fal
     }
     // RoundRect hit-tests correctly — no bug here, keep the antialiased Modifier.clip.
     is ShapeStyle.RoundRect -> this.clip(RoundedCornerShape(style.radius * cornerRoundness))
+  }
+}
+
+// downstream (shiroikuma): strokes the configurable bubble border along the same shape the item
+// is clipped to. Must sit AFTER clipChatItem in the modifier chain: the stroke is centered on the
+// shape edge and the clip cuts away the outer half, so it's drawn at 2x the visible width.
+// Width comes from the bubbleBorderWidth pref (dp); 0 disables the border entirely.
+@Composable
+fun Modifier.chatItemBorder(chatItem: ChatItem? = null, tailVisible: Boolean = false, revealed: Boolean = false, color: Color): Modifier {
+  val chatItemRoundness = remember { appPreferences.chatItemRoundness.state }
+  val chatItemTail = remember { appPreferences.chatItemTail.state }
+  val borderWidth = remember { appPreferences.bubbleBorderWidth.state }.value
+  if (color == Color.Transparent || color.alpha == 0f || borderWidth <= 0f) return this
+  val style = shapeStyle(chatItem, chatItemTail.value, tailVisible, revealed)
+  val cornerRoundness = chatItemRoundness.value.coerceIn(0f, 1f)
+  val shape = when (style) {
+    is ShapeStyle.Bubble -> chatItemShape(cornerRoundness, LocalDensity.current, style.tailVisible, chatItem?.chatDir?.sent == true)
+    is ShapeStyle.RoundRect -> RoundedCornerShape(style.radius * cornerRoundness)
+  }
+  return this.drawWithCache {
+    val path = Path().apply {
+      addOutline(shape.createOutline(size, layoutDirection, this@drawWithCache))
+    }
+    val stroke = Stroke(width = borderWidth.dp.toPx() * 2)
+    onDrawWithContent {
+      this@onDrawWithContent.drawContent()
+      drawPath(path, color, style = stroke)
+    }
   }
 }
 

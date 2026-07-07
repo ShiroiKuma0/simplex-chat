@@ -1628,6 +1628,14 @@
   <string name="settings_message_ticks_thickness">Thickness</string>
   <string name="settings_message_ticks_sent_color">Sent tick (single)</string>
   <string name="settings_message_ticks_received_color">Received tick (double)</string>
+  <string name="settings_section_title_shiroikuma_colors">Chat list &amp; bubble colors</string>
+  <string name="settings_chat_list_name_color">Chat list name</string>
+  <string name="settings_bubble_sent_background_color">Sent bubble background</string>
+  <string name="settings_bubble_sent_text_color">Sent bubble text</string>
+  <string name="settings_bubble_sent_border_color">Sent bubble border</string>
+  <string name="settings_bubble_received_background_color">Received bubble background</string>
+  <string name="settings_bubble_received_text_color">Received bubble text</string>
+  <string name="settings_bubble_received_border_color">Received bubble border</string>
   <string name="settings_section_title_chat_theme">Chat theme</string>
   <string name="settings_section_title_user_theme">Profile theme</string>
   <string name="settings_section_title_chat_colors">Chat colors</string>

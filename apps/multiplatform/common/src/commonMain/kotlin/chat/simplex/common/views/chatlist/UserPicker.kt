@@ -1,6 +1,7 @@
 package chat.simplex.common.views.chatlist
 
 import SectionItemView
+import SectionItemViewLongClickable
 import TextIconSpaced
 import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -378,12 +379,14 @@ private fun GlobalSettingsSection(
     )
   }
 
-  SectionItemView(
+  // downstream (shiroikuma): long-pressing the settings cog opens the 白い熊 Simplex UI page directly
+  SectionItemViewLongClickable(
     click = {
       ModalManager.start.showModalCloseable(cardScreen = true) { close ->
         SettingsView(chatModel, setPerformLA, close)
       }
     },
+    longClick = { showShiroikumaUIModal() },
     padding = if (appPlatform.isDesktop) PaddingValues(start = DEFAULT_PADDING * 1.7f, end = DEFAULT_PADDING + 2.dp) else PaddingValues(start = DEFAULT_PADDING, end = DEFAULT_PADDING_HALF)
   ) {
     val text = generalGetString(MR.strings.settings_section_title_settings).lowercase().capitalize(Locale.current)
