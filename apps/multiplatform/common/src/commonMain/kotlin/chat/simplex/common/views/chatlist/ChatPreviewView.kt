@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.*
 import chat.simplex.common.ui.theme.*
+import chat.simplex.common.ui.theme.ThemeManager.colorFromReadableHex
 import chat.simplex.common.views.helpers.*
 import chat.simplex.common.model.*
 import chat.simplex.common.model.ChatController.appPrefs
@@ -137,6 +138,8 @@ fun ChatPreviewView(
   @Composable
   fun chatPreviewTitle() {
     val deleting by remember(disabled, chat.id) { mutableStateOf(chatModel.deletedChats.value.contains(chat.remoteHostId to chat.chatInfo.id)) }
+    // downstream (shiroikuma): normal-state chat names use the configurable list-name color (default yellow)
+    val customNameColor = remember { appPrefs.chatListNameColor.state }.value?.colorFromReadableHex() ?: Color.Unspecified
     when (cInfo) {
       is ChatInfo.Direct -> {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -150,7 +153,7 @@ fun ChatPreviewView(
           } else if (!cInfo.contact.sndReady) {
             MaterialTheme.colors.secondary
           } else {
-            Color.Unspecified
+            customNameColor
           }
           NameWithBadge(
             cInfo.chatViewName,
@@ -170,12 +173,12 @@ fun ChatPreviewView(
           when (cInfo.groupInfo.membership.memberStatus) {
             GroupMemberStatus.MemInvited -> if (chat.chatInfo.incognito) Indigo else MaterialTheme.colors.primary
             GroupMemberStatus.MemAccepted, GroupMemberStatus.MemRejected -> MaterialTheme.colors.secondary
-            else -> if (cInfo.groupInfo.nextConnectPrepared) MaterialTheme.colors.primary else Color.Unspecified
+            else -> if (cInfo.groupInfo.nextConnectPrepared) MaterialTheme.colors.primary else customNameColor
           }
         }
         chatPreviewTitleText(color = color)
       }
-      else -> chatPreviewTitleText()
+      else -> chatPreviewTitleText(color = customNameColor)
     }
   }
 
