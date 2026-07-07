@@ -7,6 +7,10 @@ description: Maintain and build the user's downstream fork of SimpleX Chat for A
 
 The user maintains a downstream fork of [simplex-chat](https://github.com/simplex-chat/simplex-chat) for Android, used on a Huawei Mate XT alongside the official F-Droid build. The fork follows the user's standard `master`/`custom` model: a clean `master` mirroring upstream and a `custom` branch holding all downstream changes as commits, rebased onto each new upstream release tag.
 
+## Always build (standing order)
+
+After implementing **any** code change in this repo (feature, fix, rebase fixup), proceed **directly** to the full build + sign + deploy pipeline below — do not wait for a separate "build" instruction and do not ask first. 白い熊 gave this standing order on 2026-07-07; for builds in this project it overrides the global "act only on explicit instruction" rule in `~/.claude/CLAUDE.md`. Committing and **pushing remain explicit-instruction-only** — the standing order covers the build + deploy, nothing after it.
+
 ## Project identity
 
 | Item | Value |
@@ -326,7 +330,7 @@ apksigner sign \
 apksigner verify --verbose /tmp/sx-signed.apk
 ```
 
-Build takes 3-8 minutes after the gradle cache warms up. Pause and confirm with the user before kicking it off; on a failure, capture the stacktrace and share it before retrying.
+Build takes 3-8 minutes after the gradle cache warms up. Kick it off without asking — building after a change is a standing order (see "Always build" at the top). On a failure, capture the stacktrace and share it before retrying.
 
 **Deploy** — see "Deploy" section — then **stop**. Do not push anything yet.
 
