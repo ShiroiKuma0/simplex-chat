@@ -3,6 +3,7 @@ package chat.simplex.common.ui.theme
 import androidx.compose.material.Colors
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontFamily
 import chat.simplex.common.model.*
@@ -53,6 +54,29 @@ object ThemeManager {
       ?: ThemeWallpaper.from(PresetWallpaper.SCHOOL.toType(CurrentColors.value.base), null, null))
   }
 
+  // downstream (shiroikuma): global UI color overrides from the 白い熊 Simplex UI page, applied
+  // AFTER all theme resolution so every reader (MaterialTheme and direct CurrentColors users)
+  // sees them. Null prefs follow the theme; defaults are black background / pure-yellow text.
+  private fun ActiveTheme.withShiroikumaOverrides(): ActiveTheme {
+    val bg = appPrefs.uiBackgroundColor.get()?.colorFromReadableHex()
+    val text = appPrefs.uiTextColor.get()?.colorFromReadableHex()
+    val accent = appPrefs.uiAccentColor.get()?.colorFromReadableHex()
+    val secondary = appPrefs.uiSecondaryColor.get()?.colorFromReadableHex()
+    if (bg == null && text == null && accent == null && secondary == null) return this
+    val newColors = colors.copy(
+      primary = accent ?: colors.primary,
+      onPrimary = if (accent != null) (bg ?: Color.Black) else colors.onPrimary,
+      secondary = secondary ?: colors.secondary,
+      background = bg ?: colors.background,
+      surface = bg ?: colors.surface,
+      onBackground = text ?: colors.onBackground,
+      onSurface = text ?: colors.onSurface,
+      isLight = if (bg != null) bg.luminance() > 0.5f else colors.isLight,
+    )
+    val newAppColors = if (text != null) appColors.copy(title = text) else appColors
+    return copy(colors = newColors, appColors = newAppColors)
+  }
+
   // Spec: spec/services/theme.md#currentColors
   fun currentColors(themeOverridesForType: WallpaperType?, perChatTheme: ThemeModeOverride?, perUserTheme: ThemeModeOverrides?, appSettingsTheme: List<ThemeOverrides>): ActiveTheme {
     val themeName = appPrefs.currentTheme.get()!!
@@ -71,7 +95,7 @@ object ThemeManager {
     val theme = (appSettingsTheme.sameTheme(themeOverridesForType ?: perChatTheme?.type ?: perUserTheme?.type ?: defaultTheme?.wallpaper?.toAppWallpaper()?.type, nonSystemThemeName) ?: defaultTheme)
 
     if (theme == null && perUserTheme == null && perChatTheme == null && themeOverridesForType == null) {
-      return ActiveTheme(themeName, baseTheme.base, baseTheme.colors, baseTheme.appColors, baseTheme.wallpaper)
+      return ActiveTheme(themeName, baseTheme.base, baseTheme.colors, baseTheme.appColors, baseTheme.wallpaper).withShiroikumaOverrides()
     }
     val presetWallpaperTheme = when {
       perChatTheme?.wallpaper != null -> if (perChatTheme.wallpaper.preset != null) PresetWallpaper.from(perChatTheme.wallpaper.preset)?.colors?.get(baseTheme.base) else null
@@ -86,7 +110,7 @@ object ThemeManager {
       colors,
       themeOrEmpty.toAppColors(themeOrEmpty.base, perChatTheme?.colors, perChatTheme?.type, perUserTheme?.colors, perUserTheme?.type, presetWallpaperTheme),
       themeOrEmpty.toAppWallpaper(themeOverridesForType, perChatTheme, perUserTheme, colors.background)
-    )
+    ).withShiroikumaOverrides()
   }
 
   fun currentThemeOverridesForExport(perChatTheme: ThemeModeOverride?, perUserTheme: ThemeModeOverrides?): ThemeOverrides {

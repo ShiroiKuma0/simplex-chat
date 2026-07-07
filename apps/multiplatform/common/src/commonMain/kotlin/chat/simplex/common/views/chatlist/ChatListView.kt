@@ -440,27 +440,26 @@ private fun AndroidOnboardingCards() {
 
 @Composable
 private fun BoxScope.NewChatSheetFloatingButton(oneHandUI: State<Boolean>, stopped: Boolean) {
-  FloatingActionButton(
-    onClick = {
-      if (!stopped) {
-        showNewChatSheet(oneHandUI)
-      }
-    },
+  // downstream (shiroikuma): black background + accent icon and border (the stock primary
+  // background with a white glyph is unreadable on the black/yellow theme); long-press opens
+  // the 白い熊 Simplex UI page
+  val accent = if (!stopped) MaterialTheme.colors.primary else MaterialTheme.colors.secondary
+  Box(
     Modifier
       .navigationBarsPadding()
       .padding(end = DEFAULT_PADDING, bottom = DEFAULT_PADDING)
       .align(Alignment.BottomEnd)
-      .size(AppBarHeight * fontSizeSqrtMultiplier),
-    elevation = FloatingActionButtonDefaults.elevation(
-      defaultElevation = 0.dp,
-      pressedElevation = 0.dp,
-      hoveredElevation = 0.dp,
-      focusedElevation = 0.dp,
-    ),
-    backgroundColor = if (!stopped) MaterialTheme.colors.primary else MaterialTheme.colors.secondary,
-    contentColor = Color.White
+      .size(AppBarHeight * fontSizeSqrtMultiplier)
+      .clip(CircleShape)
+      .background(MaterialTheme.colors.background)
+      .border(1.5.dp, accent, CircleShape)
+      .combinedClickable(
+        onClick = { if (!stopped) showNewChatSheet(oneHandUI) },
+        onLongClick = { showShiroikumaUIModal() }
+      ),
+    contentAlignment = Alignment.Center
   ) {
-    Icon(painterResource(MR.images.ic_edit_filled), stringResource(MR.strings.add_contact_or_create_group), Modifier.size(22.dp * fontSizeSqrtMultiplier))
+    Icon(painterResource(MR.images.ic_edit_filled), stringResource(MR.strings.add_contact_or_create_group), Modifier.size(22.dp * fontSizeSqrtMultiplier), tint = accent)
   }
 }
 
@@ -546,22 +545,30 @@ private fun ChatListToolbar(userPickerState: MutableStateFlow<AnimatedViewState>
       }
 
       barButtons.add {
-        IconButton(
-          onClick = {
-            showNewChatSheet(oneHandUI)
-          },
+        // downstream (shiroikuma): black/accent instead of primary/white, long-press opens the
+        // 白い熊 Simplex UI page
+        Box(
+          Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .combinedClickable(
+              onClick = { showNewChatSheet(oneHandUI) },
+              onLongClick = { showShiroikumaUIModal() }
+            ),
+          contentAlignment = Alignment.Center
         ) {
           Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-              .background(MaterialTheme.colors.primary, shape = CircleShape)
+              .background(MaterialTheme.colors.background, shape = CircleShape)
+              .border(1.5.dp, MaterialTheme.colors.primary, CircleShape)
               .size(33.dp * fontSizeSqrtMultiplier)
           ) {
             Icon(
               painterResource(MR.images.ic_edit_filled),
               stringResource(MR.strings.add_contact_or_create_group),
               Modifier.size(sp16),
-              tint = Color.White
+              tint = MaterialTheme.colors.primary
             )
           }
         }
@@ -585,7 +592,8 @@ private fun ChatListToolbar(userPickerState: MutableStateFlow<AnimatedViewState>
         val allRead = users
           .filter { u -> !u.user.activeUser && !u.user.hidden }
           .all { u -> u.unreadCount == 0 }
-        UserProfileButton(chatModel.currentUser.value?.profile?.image, allRead) {
+        // downstream (shiroikuma): long-pressing the avatar opens the 白い熊 Simplex UI page directly
+        UserProfileButton(chatModel.currentUser.value?.profile?.image, allRead, onLongClick = { showShiroikumaUIModal() }) {
             userPickerState.value = AnimatedViewState.VISIBLE
         }
       }
@@ -664,9 +672,17 @@ fun SubscriptionStatusIndicator(click: (() -> Unit)) {
 }
 
 @Composable
-fun UserProfileButton(image: String?, allRead: Boolean, onButtonClicked: () -> Unit) {
+fun UserProfileButton(image: String?, allRead: Boolean, onLongClick: (() -> Unit)? = null, onButtonClicked: () -> Unit) {
   Row(verticalAlignment = Alignment.CenterVertically) {
-    IconButton(onClick = onButtonClicked) {
+    // downstream (shiroikuma): IconButton has no long-press support, so the same 48.dp round
+    // target is built from a Box with combinedClickable (long press opens the 白い熊 UI page)
+    Box(
+      Modifier
+        .size(48.dp)
+        .clip(CircleShape)
+        .combinedClickable(onClick = onButtonClicked, onLongClick = onLongClick),
+      contentAlignment = Alignment.Center
+    ) {
       Box {
         ProfileImage(
           image = image,

@@ -825,7 +825,7 @@ fun SimpleXTheme(darkTheme: Boolean? = null, content: @Composable () -> Unit) {
   }
   MaterialTheme(
     colors = theme.colors,
-    typography = Typography,
+    typography = appTypography(),
     shapes = Shapes,
     content = {
       val density = Density(LocalDensity.current.density * desktopDensityScaleMultiplier, LocalDensity.current.fontScale * fontSizeMultiplier)
@@ -854,7 +854,7 @@ fun SimpleXTheme(darkTheme: Boolean? = null, content: @Composable () -> Unit) {
 fun SimpleXThemeOverride(theme: ThemeManager.ActiveTheme, content: @Composable () -> Unit) {
   MaterialTheme(
     colors = theme.colors,
-    typography = Typography,
+    typography = appTypography(),
     shapes = Shapes,
     content = {
       val rememberedAppColors = remember {

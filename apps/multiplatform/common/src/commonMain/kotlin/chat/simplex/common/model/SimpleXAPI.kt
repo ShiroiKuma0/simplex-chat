@@ -249,6 +249,33 @@ class AppPreferences {
   val messageTickThickness = mkFloatPreference(SHARED_PREFS_MESSAGE_TICK_THICKNESS, 0f)
   val messageTickSentColor = mkStrPreference(SHARED_PREFS_MESSAGE_TICK_SENT_COLOR, DEFAULT_MESSAGE_TICK_SENT_COLOR)
   val messageTickReceivedColor = mkStrPreference(SHARED_PREFS_MESSAGE_TICK_RECEIVED_COLOR, null)
+  // downstream (shiroikuma): chat-list name color and chat bubble colors (background/text/border,
+  // separate for sent and received). Readable-hex strings; null = follow the theme (stock look).
+  val chatListNameColor = mkStrPreference(SHARED_PREFS_CHAT_LIST_NAME_COLOR, DEFAULT_SHIROIKUMA_YELLOW)
+  val bubbleSentBackgroundColor = mkStrPreference(SHARED_PREFS_BUBBLE_SENT_BACKGROUND_COLOR, DEFAULT_BUBBLE_BACKGROUND_COLOR)
+  val bubbleSentTextColor = mkStrPreference(SHARED_PREFS_BUBBLE_SENT_TEXT_COLOR, DEFAULT_SHIROIKUMA_YELLOW)
+  val bubbleSentBorderColor = mkStrPreference(SHARED_PREFS_BUBBLE_SENT_BORDER_COLOR, DEFAULT_SHIROIKUMA_YELLOW)
+  val bubbleReceivedBackgroundColor = mkStrPreference(SHARED_PREFS_BUBBLE_RECEIVED_BACKGROUND_COLOR, DEFAULT_BUBBLE_BACKGROUND_COLOR)
+  val bubbleReceivedTextColor = mkStrPreference(SHARED_PREFS_BUBBLE_RECEIVED_TEXT_COLOR, DEFAULT_SHIROIKUMA_YELLOW)
+  val bubbleReceivedBorderColor = mkStrPreference(SHARED_PREFS_BUBBLE_RECEIVED_BORDER_COLOR, DEFAULT_SHIROIKUMA_YELLOW)
+  // downstream (shiroikuma): global UI overrides (白い熊 Simplex UI page) — app-wide colors applied
+  // after all theme resolution (null = follow the theme), bubble border width in dp (0 = no border),
+  // an external app font (file name inside fontsDir; null = built-in Inter), and the shared
+  // most-recently-used colors shown as one-click presets in the RGBA color editor.
+  val uiBackgroundColor = mkStrPreference(SHARED_PREFS_UI_BACKGROUND_COLOR, DEFAULT_SHIROIKUMA_BLACK)
+  val uiTextColor = mkStrPreference(SHARED_PREFS_UI_TEXT_COLOR, DEFAULT_SHIROIKUMA_YELLOW)
+  val uiAccentColor = mkStrPreference(SHARED_PREFS_UI_ACCENT_COLOR, DEFAULT_SHIROIKUMA_YELLOW)
+  val uiSecondaryColor = mkStrPreference(SHARED_PREFS_UI_SECONDARY_COLOR, DEFAULT_UI_SECONDARY_COLOR)
+  val bubbleBorderWidth = mkFloatPreference(SHARED_PREFS_BUBBLE_BORDER_WIDTH, 1.5f)
+  // sender row inside received bubbles: avatar size (dp) and name font size (sp)
+  val bubbleSenderIconSize = mkFloatPreference(SHARED_PREFS_BUBBLE_SENDER_ICON_SIZE, 24f)
+  val bubbleSenderNameSize = mkFloatPreference(SHARED_PREFS_BUBBLE_SENDER_NAME_SIZE, 13.5f)
+  // chat view: date separator styling and call item icon scale
+  val chatDateBold = mkBoolPreference(SHARED_PREFS_CHAT_DATE_BOLD, true)
+  val chatDateUnderline = mkBoolPreference(SHARED_PREFS_CHAT_DATE_UNDERLINE, true)
+  val callIconScale = mkFloatPreference(SHARED_PREFS_CALL_ICON_SCALE, 2f)
+  val appFontFamily = mkStrPreference(SHARED_PREFS_APP_FONT_FAMILY, null)
+  val recentPickedColors = mkStrPreference(SHARED_PREFS_RECENT_PICKED_COLORS, null)
   val fontScale = mkFloatPreference(SHARED_PREFS_FONT_SCALE, 1f)
   val densityScale = mkFloatPreference(SHARED_PREFS_DENSITY_SCALE, 1f)
   val inAppBarsDefaultAlpha = if (deviceSupportsBlur) 0.875f else 0.975f
@@ -503,6 +530,29 @@ class AppPreferences {
     private const val SHARED_PREFS_MESSAGE_TICK_SENT_COLOR = "MessageTickSentColor"
     private const val SHARED_PREFS_MESSAGE_TICK_RECEIVED_COLOR = "MessageTickReceivedColor"
     const val DEFAULT_MESSAGE_TICK_SENT_COLOR = "#ff4fc3f7"
+    private const val SHARED_PREFS_CHAT_LIST_NAME_COLOR = "ChatListNameColor"
+    private const val SHARED_PREFS_BUBBLE_SENT_BACKGROUND_COLOR = "BubbleSentBackgroundColor"
+    private const val SHARED_PREFS_BUBBLE_SENT_TEXT_COLOR = "BubbleSentTextColor"
+    private const val SHARED_PREFS_BUBBLE_SENT_BORDER_COLOR = "BubbleSentBorderColor"
+    private const val SHARED_PREFS_BUBBLE_RECEIVED_BACKGROUND_COLOR = "BubbleReceivedBackgroundColor"
+    private const val SHARED_PREFS_BUBBLE_RECEIVED_TEXT_COLOR = "BubbleReceivedTextColor"
+    private const val SHARED_PREFS_BUBBLE_RECEIVED_BORDER_COLOR = "BubbleReceivedBorderColor"
+    const val DEFAULT_SHIROIKUMA_YELLOW = "#ffffff00"
+    const val DEFAULT_BUBBLE_BACKGROUND_COLOR = "#ff000000"
+    private const val SHARED_PREFS_UI_BACKGROUND_COLOR = "UiBackgroundColor"
+    private const val SHARED_PREFS_UI_TEXT_COLOR = "UiTextColor"
+    private const val SHARED_PREFS_UI_ACCENT_COLOR = "UiAccentColor"
+    private const val SHARED_PREFS_UI_SECONDARY_COLOR = "UiSecondaryColor"
+    private const val SHARED_PREFS_BUBBLE_BORDER_WIDTH = "BubbleBorderWidth"
+    private const val SHARED_PREFS_BUBBLE_SENDER_ICON_SIZE = "BubbleSenderIconSize"
+    private const val SHARED_PREFS_BUBBLE_SENDER_NAME_SIZE = "BubbleSenderNameSize"
+    private const val SHARED_PREFS_CHAT_DATE_BOLD = "ChatDateBold"
+    private const val SHARED_PREFS_CHAT_DATE_UNDERLINE = "ChatDateUnderline"
+    private const val SHARED_PREFS_CALL_ICON_SCALE = "CallIconScale"
+    private const val SHARED_PREFS_APP_FONT_FAMILY = "AppFontFamily"
+    private const val SHARED_PREFS_RECENT_PICKED_COLORS = "RecentPickedColors"
+    const val DEFAULT_SHIROIKUMA_BLACK = "#ff000000"
+    const val DEFAULT_UI_SECONDARY_COLOR = "#99ffff00"
     private const val SHARED_PREFS_FONT_SCALE = "FontScale"
     private const val SHARED_PREFS_DENSITY_SCALE = "DensityScale"
     private const val SHARED_PREFS_IN_APP_BARS_ALPHA = "InAppBarsAlpha"
