@@ -346,6 +346,9 @@ object AppearanceScope {
     }
   }
 
+  // downstream (shiroikuma): the chat-list-name/bubble color rows moved to the dedicated
+  // 白い熊 Simplex UI page (ShiroikumaUIView.kt) together with all other fork customizations.
+
   @Composable
   fun FontScaleSection() {
     val localFontScale = remember { mutableStateOf(appPrefs.fontScale.get()) }

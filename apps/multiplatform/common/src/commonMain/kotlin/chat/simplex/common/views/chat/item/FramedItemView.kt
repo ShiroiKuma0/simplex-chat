@@ -16,11 +16,13 @@ import dev.icerock.moko.resources.compose.painterResource
 import dev.icerock.moko.resources.compose.stringResource
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import chat.simplex.common.model.*
 import chat.simplex.common.platform.*
 import chat.simplex.common.ui.theme.*
+import chat.simplex.common.ui.theme.ThemeManager.colorFromReadableHex
 import chat.simplex.common.views.chat.*
 import chat.simplex.common.views.helpers.*
 import chat.simplex.common.views.newchat.planAndConnect
@@ -210,8 +212,38 @@ fun FramedItemView(
   val transparentBackground = (ci.content.msgContent is MsgContent.MCImage || ci.content.msgContent is MsgContent.MCVideo) &&
       !ci.meta.isLive && ci.content.text.isEmpty() && ci.quotedItem == null && ci.meta.itemForwarded == null
 
-  val sentColor = MaterialTheme.appColors.sentMessage
-  val receivedColor = MaterialTheme.appColors.receivedMessage
+  // downstream (shiroikuma): bubble background/text/border come from the configurable bubble
+  // color prefs (defaults: black background, yellow text, yellow border); null = theme colors.
+  val sentColor = remember { appPreferences.bubbleSentBackgroundColor.state }.value?.colorFromReadableHex() ?: MaterialTheme.appColors.sentMessage
+  val receivedColor = remember { appPreferences.bubbleReceivedBackgroundColor.state }.value?.colorFromReadableHex() ?: MaterialTheme.appColors.receivedMessage
+  val borderColor =
+    if (transparentBackground) Color.Transparent
+    else remember(sent) { if (sent) appPreferences.bubbleSentBorderColor.state else appPreferences.bubbleReceivedBorderColor.state }.value?.colorFromReadableHex() ?: Color.Transparent
+
+  // downstream (shiroikuma): counterparty name + avatar (人 placeholder when they have no
+  // profile image) at the bottom LEFT of received bubbles, bold, in the received text color.
+  // Avatar size and name font size are settable on the 白い熊 Simplex UI page.
+  @Composable
+  fun SenderNameRow() {
+    val dir = ci.chatDir
+    val (senderName, senderImage) = when {
+      dir is CIDirection.GroupRcv -> dir.groupMember.chatViewName to dir.groupMember.image
+      dir is CIDirection.DirectRcv && chatInfo is ChatInfo.Direct -> chatInfo.chatViewName to chatInfo.image
+      else -> return
+    }
+    val nameColor = remember { appPreferences.bubbleReceivedTextColor.state }.value?.colorFromReadableHex() ?: MaterialTheme.colors.secondary
+    val iconSize = remember { appPreferences.bubbleSenderIconSize.state }.value
+    val nameSize = remember { appPreferences.bubbleSenderNameSize.state }.value
+    Row(
+      Modifier.padding(start = 12.dp, end = 12.dp, bottom = 5.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      ProfileImage(size = iconSize.dp, image = senderImage, color = nameColor)
+      Spacer(Modifier.width(4.dp))
+      Text(senderName, color = nameColor, fontSize = nameSize.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+  }
+
   Box(Modifier
     .clipChatItem(ci, tailVisible, revealed = true)
     .background(
@@ -220,8 +252,11 @@ fun FramedItemView(
         sent -> sentColor
         else -> receivedColor
       }
-    )) {
+    )
+    .chatItemBorder(ci, tailVisible, revealed = true, color = borderColor)) {
     var metaColor = MaterialTheme.colors.secondary
+    // the sender row below is start-aligned (bottom left of the bubble)
+    Column {
     Box(contentAlignment = Alignment.BottomEnd) {
       val chatItemTail = remember { appPreferences.chatItemTail.state }
       val style = shapeStyle(ci, chatItemTail.value, tailVisible, true)
@@ -389,6 +424,8 @@ fun FramedItemView(
         CIMetaView(ci, chatTTL, metaColor, showViaProxy = showViaProxy, showTimestamp = showTimestamp)
       }
     }
+    if (!sent) SenderNameRow()
+    }
   }
 }
 
@@ -409,10 +446,15 @@ fun CIMarkdownText(
   val chatInfo = chat.chatInfo
   val text = if (ci.meta.isLive) ci.content.msgContent?.text ?: ci.text else ci.text
   val selection = setupItemSelection(LocalSelectionManager.current, LocalItemContext.current.selectionIndex, ci.meta.isLive == true)
+  // downstream (shiroikuma): per-direction configurable message text color; null = theme onSurface
+  val bubbleTextColor = remember(ci.chatDir.sent) {
+    if (ci.chatDir.sent) appPreferences.bubbleSentTextColor.state else appPreferences.bubbleReceivedTextColor.state
+  }.value?.colorFromReadableHex() ?: MaterialTheme.colors.onSurface
 
   Box(Modifier.padding(vertical = 7.dp, horizontal = 12.dp).then(selection.positionModifier)) {
     MarkdownText(
       text, if (text.isEmpty()) emptyList() else ci.formattedText, toggleSecrets = true,
+      style = MaterialTheme.typography.body1.copy(color = bubbleTextColor, lineHeight = 22.sp),
       sendCommandMsg = if (chatInfo.useCommands && chat.chatInfo.sndReady) { { msg -> sendCommandMsg(chatsCtx, chat, msg) } } else null,
       meta = ci.meta, chatTTL = chatTTL, linkMode = linkMode,
       mentions = ci.mentions, userMemberId = when {
