@@ -12,18 +12,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import chat.simplex.common.model.ArchiveConfig
 import chat.simplex.common.model.ChatController.appPrefs
 import chat.simplex.common.model.SharedPreference
 import chat.simplex.common.model.json
 import chat.simplex.common.platform.*
 import chat.simplex.common.ui.theme.ThemeManager
-import chat.simplex.common.views.database.restartChatOrApp
+import chat.simplex.common.views.database.*
 import chat.simplex.common.views.helpers.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
-import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.io.OutputStream
 import java.net.URI
 import java.text.SimpleDateFormat
@@ -39,14 +40,23 @@ import java.util.zip.ZipOutputStream
 // import via file picker, and a bordered result dialog. The Cancel/Import/Export pill row
 // follows ArcaneChat's dialog style. On success the whole chain auto-closes (info dialog →
 // panel → UI settings page); failures leave the panel open.
+//
+// The Accounts category (first in the list) embeds the SimpleX chat-database archive
+// (upstream's export/import database machinery): export stops the chat, produces the archive
+// and restarts; import confirms the destructive replacement, then wipes and re-imports the
+// database with the chat stopped.
 
 const val UI_EXPORT_PREFIX = "shiroikuma-simplex-ui_"
 private const val UI_EXPORT_FORMAT = "shiroikuma-simplex-ui"
+// the SimpleX chat-database archive (all accounts/profiles with their keys, contacts and
+// messages), embedded verbatim as one entry inside the UI export ZIP
+private const val ACCOUNTS_ENTRY = "accounts.zip"
 internal val WARN_COLOR = Color(0xFFFF5252)
 
 // ───────────────────────── categories ─────────────────────────
 
 enum class UiEximCategory(val id: String, val label: String) {
+  ACCOUNTS("accounts", "Accounts"),
   APP_COLORS("app_colors", "App colors"),
   FONT("font", "Font"),
   CHAT_LIST("chat_list", "Chat list"),
@@ -64,6 +74,8 @@ private sealed class PrefSpec(val key: String) {
 // Every settable item of the UI page, split the same way as the page's sections.
 // Keys are logical names, deliberately decoupled from the SharedPreferences key strings.
 private fun UiEximCategory.specs(): List<PrefSpec> = when (this) {
+  // accounts live in the chat database, not in prefs — handled by the archive entry, not specs
+  UiEximCategory.ACCOUNTS -> emptyList()
   UiEximCategory.APP_COLORS -> listOf(
     PrefSpec.Str("uiBackgroundColor", appPrefs.uiBackgroundColor),
     PrefSpec.Str("uiTextColor", appPrefs.uiTextColor),
@@ -123,14 +135,14 @@ fun uiLastExportStatus(dirUri: String?): Pair<String, Boolean> {
 
 // ───────────────────────── export / import engine ─────────────────────────
 
-private fun writeUiExportZip(cats: Set<UiEximCategory>, out: OutputStream) {
+private fun writeUiExportZip(cats: Set<UiEximCategory>, out: OutputStream, accountsArchive: File?) {
   ZipOutputStream(out).use { zip ->
     fun entry(name: String, bytes: ByteArray) {
       zip.putNextEntry(ZipEntry(name)); zip.write(bytes); zip.closeEntry()
     }
     val manifest = buildJsonObject {
       put("format", JsonPrimitive(UI_EXPORT_FORMAT))
-      put("version", JsonPrimitive(1))
+      put("version", JsonPrimitive(2))
       put("app", JsonPrimitive("shiroikuma.simplex"))
       put("createdTs", JsonPrimitive(System.currentTimeMillis()))
       put("categories", JsonArray(cats.map { JsonPrimitive(it.id) }))
@@ -138,6 +150,15 @@ private fun writeUiExportZip(cats: Set<UiEximCategory>, out: OutputStream) {
     entry("manifest.json", manifest.toString().toByteArray())
     for (cat in UiEximCategory.entries) {
       if (cat !in cats) continue
+      if (cat == UiEximCategory.ACCOUNTS) {
+        // streamed, not read into memory — the chat archive can be hundreds of MB
+        if (accountsArchive != null) {
+          zip.putNextEntry(ZipEntry(ACCOUNTS_ENTRY))
+          accountsArchive.inputStream().use { it.copyTo(zip) }
+          zip.closeEntry()
+        }
+        continue
+      }
       val obj = buildJsonObject {
         for (spec in cat.specs()) when (spec) {
           is PrefSpec.Str -> put(spec.key, spec.pref.get()?.let { JsonPrimitive(it) } ?: JsonNull)
@@ -155,25 +176,73 @@ private fun writeUiExportZip(cats: Set<UiEximCategory>, out: OutputStream) {
   }
 }
 
-/** Applies the selected categories found in the archive; returns the per-category summary. */
-private fun importUiZip(bytes: ByteArray, cats: Set<UiEximCategory>): String {
+private class UiImportData(val entries: Map<String, ByteArray>, val accountsTmp: File?)
+
+/**
+ * Streams the archive: small JSON/font entries into memory, the accounts chat-database
+ * archive (potentially huge) straight to a temp file — only when its import is wanted.
+ */
+private fun readUiImportZip(uri: URI, wantAccounts: Boolean): UiImportData {
   val entries = HashMap<String, ByteArray>()
-  ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
-    var e = zip.nextEntry
-    while (e != null) {
-      if (!e.isDirectory) entries[e.name] = zip.readBytes()
-      e = zip.nextEntry
+  var accountsTmp: File? = null
+  try {
+    val ins = uri.inputStream() ?: error("no input stream")
+    ZipInputStream(ins).use { zip ->
+      var e = zip.nextEntry
+      while (e != null) {
+        if (!e.isDirectory) {
+          if (e.name == ACCOUNTS_ENTRY) {
+            if (wantAccounts) {
+              tmpDir.mkdirs()
+              val f = File(tmpDir, "ui-import-$ACCOUNTS_ENTRY")
+              FileOutputStream(f).use { zip.copyTo(it) }
+              accountsTmp = f
+            }
+          } else {
+            entries[e.name] = zip.readBytes()
+          }
+        }
+        e = zip.nextEntry
+      }
     }
+    val manifest = entries["manifest.json"]?.let {
+      runCatching { json.parseToJsonElement(it.decodeToString()).jsonObject }.getOrNull()
+    }
+    if (manifest?.get("format")?.jsonPrimitive?.contentOrNull != UI_EXPORT_FORMAT) {
+      error("not a 白い熊 Simplex UI export (missing or wrong manifest)")
+    }
+    return UiImportData(entries, accountsTmp)
+  } catch (e: Throwable) {
+    accountsTmp?.delete()
+    throw e
   }
-  val manifest = entries["manifest.json"]?.let {
-    runCatching { json.parseToJsonElement(it.decodeToString()).jsonObject }.getOrNull()
+}
+
+/**
+ * Upstream's database-import sequence (DatabaseView.importArchive), run with the chat
+ * stopped: wipe current storage, import the archive, re-read app settings on next start.
+ */
+private suspend fun importAccountsArchive(archive: File): String {
+  try {
+    chatModel.controller.apiDeleteStorage()
+    wallpapersDir.mkdirs()
+    val config = ArchiveConfig(archive.absolutePath, parentTempDirectory = databaseExportDir.toString())
+    val errs = chatModel.controller.apiImportArchive(config)
+    appPrefs.shouldImportAppSettings.set(true)
+    DatabaseUtils.ksDatabasePassword.remove()
+    chatModel.chatDbChanged.value = true
+    return "Accounts: chat database replaced" +
+      if (errs.isEmpty()) "" else " (${errs.size} non-fatal error${if (errs.size == 1) "" else "s"})"
+  } finally {
+    archive.delete()
   }
-  if (manifest?.get("format")?.jsonPrimitive?.contentOrNull != UI_EXPORT_FORMAT) {
-    error("not a 白い熊 Simplex UI export (missing or wrong manifest)")
-  }
+}
+
+/** Applies the selected pref categories found in the archive; returns per-category summary lines. */
+private fun applyUiPrefEntries(entries: Map<String, ByteArray>, cats: Set<UiEximCategory>): List<String> {
   val lines = ArrayList<String>()
   for (cat in UiEximCategory.entries) {
-    if (cat !in cats) continue
+    if (cat !in cats || cat == UiEximCategory.ACCOUNTS) continue
     val data = entries["${cat.id}.json"] ?: continue
     val obj = json.parseToJsonElement(data.decodeToString()).jsonObject
     var n = 0
@@ -199,8 +268,7 @@ private fun importUiZip(bytes: ByteArray, cats: Set<UiEximCategory>): String {
     }
     lines.add("${cat.label}: $n setting${if (n == 1) "" else "s"}$extra")
   }
-  if (lines.isEmpty()) error("the file contains none of the selected categories")
-  return lines.joinToString("\n")
+  return lines
 }
 
 // ───────────────────────── panel ─────────────────────────
@@ -211,6 +279,8 @@ private class UiEximState {
   }
   // bumped after a directory pick or an export so the status line recomputes
   val refresh = mutableStateOf(0)
+  // an accounts export/import (chat stop → archive → chat start) is running
+  val busy = mutableStateOf(false)
 
   fun selected(): Set<UiEximCategory> = UiEximCategory.entries.filter { checks[it] == true }.toSet()
 }
@@ -359,17 +429,24 @@ private fun UiExportImportPanel(state: UiEximState) {
         }
         // ArcaneChat-style button line: Cancel alone on the left, Import/Export on the right
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-          UiPillButton("Cancel") { AlertManager.shared.hideAlert() }
+          val busy = state.busy.value
+          UiPillButton("Cancel") { if (!busy) AlertManager.shared.hideAlert() }
           Spacer(Modifier.weight(1f))
+          if (busy) {
+            CircularProgressIndicator(Modifier.size(22.dp), color = MaterialTheme.colors.primary, strokeWidth = 2.5.dp)
+            Spacer(Modifier.width(10.dp))
+          }
           UiPillButton("Import") {
-            if (state.selected().isEmpty()) {
-              AlertManager.shared.showAlertMsg("Import", "No categories selected.")
-            } else {
-              withLongRunningApi { importLauncher.launch("*/*") }
+            if (!busy) {
+              if (state.selected().isEmpty()) {
+                AlertManager.shared.showAlertMsg("Import", "No categories selected.")
+              } else {
+                withLongRunningApi { importLauncher.launch("*/*") }
+              }
             }
           }
           Spacer(Modifier.width(8.dp))
-          UiPillButton("Export") { onUiExportClicked(state, saveAsLauncher) }
+          UiPillButton("Export") { if (!busy) onUiExportClicked(state, saveAsLauncher) }
         }
       }
     },
@@ -387,71 +464,140 @@ private fun onUiExportClicked(state: UiEximState, saveAsLauncher: FileChooserLau
     AlertManager.shared.showAlertMsg("Export", "No categories selected.")
     return
   }
+  if (UiEximCategory.ACCOUNTS in cats && appPrefs.initialRandomDBPassphrase.get()) {
+    // same rule as upstream's database export: with the initial random passphrase the
+    // archive couldn't be opened anywhere else
+    AlertManager.shared.showAlertMsg(
+      "Export",
+      "Accounts can't be exported while the database uses the initial random passphrase. Set a passphrase in Database passphrase & export, or untick Accounts."
+    )
+    return
+  }
   val dirUri = appPrefs.uiExportDirectory.get()
   if (dirUri == null) {
     // no folder set → save-as picker; the write happens in runUiExportToUri
     withLongRunningApi { saveAsLauncher.launch(uiExportFileName()) }
     return
   }
-  withLongRunningApi {
-    val name = uiExportFileName()
-    val res = runCatching {
-      withContext(Dispatchers.IO) {
-        val out = uiExportDirCreateFile(dirUri, name) ?: error("could not create a file in the export directory")
-        out.use { writeUiExportZip(cats, it) }
-      }
-    }
-    res.onSuccess {
-      state.refresh.value++
-      showUiEximDoneDialog("✓ Export", "Exported:\n\n$name", listOf("OK" to ::closeUiEximChain))
-    }.onFailure { e ->
-      Log.e(TAG, "UI export failed: ${e.stackTraceToString()}")
-      AlertManager.shared.showAlertMsg("Export failed", e.message ?: e.toString())
-    }
+  val name = uiExportFileName()
+  startUiExport(state, cats, name) {
+    uiExportDirCreateFile(dirUri, name) ?: error("could not create a file in the export directory")
   }
 }
 
 private fun runUiExportToUri(uri: URI, state: UiEximState) {
-  val cats = state.selected()
-  withLongRunningApi {
-    val res = runCatching {
-      withContext(Dispatchers.IO) {
-        uri.outputStream().use { writeUiExportZip(cats, it) }
+  startUiExport(state, state.selected(), getFileName(uri) ?: "export file") { uri.outputStream() }
+}
+
+/** With Accounts selected the chat is stopped for the archive export and restarted after. */
+private fun startUiExport(state: UiEximState, cats: Set<UiEximCategory>, doneName: String, openOut: () -> OutputStream) {
+  if (UiEximCategory.ACCOUNTS in cats) {
+    stopChatRunBlockStartChat(
+      chatModel.chatRunning.value == false,
+      mutableStateOf(appPrefs.chatLastStart.get()),
+      state.busy
+    ) {
+      performUiExport(state, cats, doneName, openOut)
+      true
+    }
+  } else {
+    withLongRunningApi { performUiExport(state, cats, doneName, openOut) }
+  }
+}
+
+private suspend fun performUiExport(state: UiEximState, cats: Set<UiEximCategory>, doneName: String, openOut: () -> OutputStream) {
+  state.busy.value = true
+  var accountsErrors = 0
+  val res = runCatching {
+    var archive: File? = null
+    try {
+      if (UiEximCategory.ACCOUNTS in cats) {
+        val exportDir = File(tmpDir, "ui-exim").also { it.mkdirs() }
+        val (path, errs) = exportChatArchive(chatModel, exportDir, mutableStateOf(null))
+        accountsErrors = errs.size
+        archive = File(path)
       }
+      withContext(Dispatchers.IO) {
+        openOut().use { writeUiExportZip(cats, it, archive) }
+      }
+    } finally {
+      archive?.delete()
     }
-    res.onSuccess {
-      state.refresh.value++
-      showUiEximDoneDialog("✓ Export", "Exported:\n\n${getFileName(uri) ?: "export file"}", listOf("OK" to ::closeUiEximChain))
-    }.onFailure { e ->
-      Log.e(TAG, "UI export failed: ${e.stackTraceToString()}")
-      AlertManager.shared.showAlertMsg("Export failed", e.message ?: e.toString())
-    }
+  }
+  state.busy.value = false
+  res.onSuccess {
+    state.refresh.value++
+    val warn =
+      if (accountsErrors == 0) ""
+      else "\n\n$accountsErrors file error${if (accountsErrors == 1) "" else "s"} in the accounts archive — exported without those files."
+    showUiEximDoneDialog("✓ Export", "Exported:\n\n$doneName$warn", listOf("OK" to ::closeUiEximChain))
+  }.onFailure { e ->
+    Log.e(TAG, "UI export failed: ${e.stackTraceToString()}")
+    AlertManager.shared.showAlertMsg("Export failed", e.message ?: e.toString())
   }
 }
 
 private fun runUiImport(uri: URI, state: UiEximState) {
   val cats = state.selected()
   withLongRunningApi {
-    val res = runCatching {
-      withContext(Dispatchers.IO) {
-        val bytes = uri.inputStream()?.use { it.readBytes() } ?: error("no input stream")
-        importUiZip(bytes, cats)
-      }
-    }
-    res.onSuccess { summary ->
-      // apply what can be applied live; the restart offer covers the rest (e.g. fonts)
-      ThemeManager.applyTheme(appPrefs.currentTheme.get()!!)
-      showUiEximDoneDialog(
-        "✓ Import — 100% success",
-        "Restored:\n\n$summary\n\nRestart to apply everything.",
-        listOf(
-          "Later" to ::closeUiEximChain,
-          "Restart now" to { restartChatOrApp() }
-        )
-      )
-    }.onFailure { e ->
+    val data = try {
+      withContext(Dispatchers.IO) { readUiImportZip(uri, UiEximCategory.ACCOUNTS in cats) }
+    } catch (e: Throwable) {
       Log.e(TAG, "UI import failed: ${e.stackTraceToString()}")
       AlertManager.shared.showAlertMsg("Import failed", e.message ?: e.toString())
+      return@withLongRunningApi
     }
+    val accountsTmp = data.accountsTmp
+    if (accountsTmp != null) {
+      // replacing the chat database is destructive — confirm, then run with the chat stopped
+      AlertManager.shared.showAlertDialog(
+        title = "Replace accounts?",
+        text = "The archive contains an accounts backup — the full chat database. Importing it DELETES the current database (all profiles, contacts and messages) and replaces it with the archived one.",
+        confirmText = "Replace",
+        onConfirm = {
+          stopChatRunBlockStartChat(
+            chatModel.chatRunning.value == false,
+            mutableStateOf(appPrefs.chatLastStart.get()),
+            state.busy
+          ) {
+            applyUiImport(data, cats, state)
+            true
+          }
+        },
+        onDismiss = { accountsTmp.delete() },
+        onDismissRequest = { accountsTmp.delete() },
+        destructive = true,
+      )
+    } else {
+      applyUiImport(data, cats, state)
+    }
+  }
+}
+
+private suspend fun applyUiImport(data: UiImportData, cats: Set<UiEximCategory>, state: UiEximState) {
+  state.busy.value = true
+  val res = runCatching {
+    val lines = ArrayList<String>()
+    val accountsTmp = data.accountsTmp
+    if (accountsTmp != null) lines.add(importAccountsArchive(accountsTmp))
+    withContext(Dispatchers.IO) { lines.addAll(applyUiPrefEntries(data.entries, cats)) }
+    if (lines.isEmpty()) error("the file contains none of the selected categories")
+    lines.joinToString("\n")
+  }
+  state.busy.value = false
+  res.onSuccess { summary ->
+    // apply what can be applied live; the restart offer covers the rest (fonts, accounts)
+    ThemeManager.applyTheme(appPrefs.currentTheme.get()!!)
+    showUiEximDoneDialog(
+      "✓ Import — 100% success",
+      "Restored:\n\n$summary\n\nRestart to apply everything.",
+      listOf(
+        "Later" to ::closeUiEximChain,
+        "Restart now" to { restartChatOrApp() }
+      )
+    )
+  }.onFailure { e ->
+    Log.e(TAG, "UI import failed: ${e.stackTraceToString()}")
+    AlertManager.shared.showAlertMsg("Import failed", e.message ?: e.toString())
   }
 }
