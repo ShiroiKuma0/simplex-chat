@@ -6,11 +6,11 @@
 
 **SimpleX Chat for Android that plays nice with dictionary keyboards — restyled black-yellow, customizable down to the tick.**
 
-A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **major additions**: an IME-commit-race fix that makes dictionary keyboards (Multiling O, Czech autocorrect, CJK input) work in the message field, the **白い熊 Simplex UI** page — every color, font, bubble, and tick in the app settable in one place, with export/import of the whole configuration — and a black-yellow fork identity.
+A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **major additions**: an IME-commit-race fix that makes dictionary keyboards (Multiling O, Czech autocorrect, CJK input) work in the message field, the **白い熊 Simplex UI** page — every color, font, bubble, and tick in the app settable in one place, with export/import of the whole configuration **including your accounts** — and a black-yellow fork identity.
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.0-beta.5+2`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.0-beta.5+3`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -28,9 +28,9 @@ One settings page (first item in Settings; also on long-press of the cog, your a
 
 ---
 
-## 📤 Export / Import every setting
+## 📤 Export / Import every setting — accounts included
 
-The top of the UI page: pick an export directory once and it shows your latest export whenever the page opens. Export writes a ZIP (manifest + one JSON per category + your font files) one-tap into that directory; import restores any selection of categories — App colors, Font, Chat list, Chat bubbles, Chat view, Delivery ticks — from any exported archive, with a restart-now option to apply everything.
+The top of the UI page: pick an export directory once and it shows your latest export whenever the page opens. Export writes a ZIP (manifest + one JSON per category + your font files) one-tap into that directory; import restores any selection of categories — **Accounts**, App colors, Font, Chat list, Chat bubbles, Chat view, Delivery ticks — from any exported archive, with a restart-now option to apply everything. The Accounts category embeds the full SimpleX chat-database archive (all profiles, contacts, and messages), making one export a complete portable backup; importing it replaces the database after an explicit confirmation.
 
 ---
 
@@ -48,7 +48,7 @@ The launcher icon is restyled into the fork's black/yellow scheme — the Simple
 
 ## 📦 Tracks upstream fast, ships lean
 
-The fork rebases onto every new upstream release — **betas included** — usually days after it ships. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.0-beta.5+2`), with version codes that always sort above the corresponding upstream build.
+The fork rebases onto every new upstream release — **betas included** — usually days after it ships. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.0-beta.5+3`), with version codes that always sort above the corresponding upstream build.
 
 ---
 
