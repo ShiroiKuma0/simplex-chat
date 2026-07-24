@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,6 +57,10 @@ fun showShiroikumaUIModal() {
 fun ShiroikumaUIView() {
   ColumnWithScrollBar {
     AppBarTitle("白い熊 Simplex UI")
+
+    // ── Export / Import ────────────────────────────────────────
+    UIHeading("Export / Import", first = true)
+    ExportImportRow(1)
 
     // ── App colors ─────────────────────────────────────────────
     UIHeading("App colors")
@@ -117,12 +122,23 @@ fun ShiroikumaUIView() {
 
 // ───────────────────────── building blocks ─────────────────────────
 
+// kxkb-style section heading: bold accent title with an underline exactly as wide as the text,
+// sections separated by a thin full-width hairline (1 px — thinnest possible) above each heading
+// except the first.
 @Composable
-private fun UIHeading(text: String) {
-  Column(Modifier.fillMaxWidth().padding(start = BASE_PADDING, end = BASE_PADDING, top = 22.dp, bottom = 6.dp)) {
-    Text(text, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colors.primary)
-    Spacer(Modifier.height(4.dp))
-    Box(Modifier.fillMaxWidth().height(2.dp).background(MaterialTheme.colors.primary))
+private fun UIHeading(text: String, first: Boolean = false) {
+  if (!first) {
+    val hairline = with(LocalDensity.current) { 1f.toDp() }
+    Box(Modifier.fillMaxWidth().padding(top = 20.dp).height(hairline).background(MaterialTheme.colors.primary))
+  }
+  Column(
+    Modifier
+      .padding(start = BASE_PADDING, end = BASE_PADDING, top = if (first) 12.dp else 8.dp, bottom = 6.dp)
+      .width(IntrinsicSize.Max)
+  ) {
+    Text(text, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colors.primary, maxLines = 1)
+    Spacer(Modifier.height(2.dp))
+    Box(Modifier.fillMaxWidth().height(2.5.dp).background(MaterialTheme.colors.primary))
   }
 }
 
@@ -135,7 +151,26 @@ private fun UISubheading(text: String, level: Int) {
   ) {
     Text(text, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colors.primary, maxLines = 1)
     Spacer(Modifier.height(2.dp))
-    Box(Modifier.fillMaxWidth().height(2.dp).background(MaterialTheme.colors.primary))
+    Box(Modifier.fillMaxWidth().height(1.5.dp).background(MaterialTheme.colors.primary))
+  }
+}
+
+// downstream (shiroikuma): the Export/Import entry row — queries the export directory when the
+// page opens and shows the latest export beneath the title (red warnings when unset/empty).
+@Composable
+private fun ExportImportRow(level: Int) {
+  val dirUri = remember { appPrefs.uiExportDirectory.state }.value
+  val status = remember(dirUri) { uiLastExportStatus(dirUri) }
+  UIRow(level, click = { showUiExportImportPanel() }) {
+    Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+      Text("Export or import every UI setting, by category…", fontSize = 15.sp)
+      Spacer(Modifier.height(1.dp))
+      Text(
+        status.first,
+        fontSize = 13.sp,
+        color = if (status.second) WARN_COLOR else MaterialTheme.colors.secondary
+      )
+    }
   }
 }
 
