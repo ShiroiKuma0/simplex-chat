@@ -276,6 +276,9 @@ class AppPreferences {
   val callIconScale = mkFloatPreference(SHARED_PREFS_CALL_ICON_SCALE, 2f)
   val appFontFamily = mkStrPreference(SHARED_PREFS_APP_FONT_FAMILY, null)
   val recentPickedColors = mkStrPreference(SHARED_PREFS_RECENT_PICKED_COLORS, null)
+  // directory the UI-page export/import writes to (Android: SAF tree URI string; desktop: plain
+  // path). Device-local by design — deliberately excluded from every export category.
+  val uiExportDirectory = mkStrPreference(SHARED_PREFS_UI_EXPORT_DIRECTORY, null)
   val fontScale = mkFloatPreference(SHARED_PREFS_FONT_SCALE, 1f)
   val densityScale = mkFloatPreference(SHARED_PREFS_DENSITY_SCALE, 1f)
   val inAppBarsDefaultAlpha = if (deviceSupportsBlur) 0.875f else 0.975f
@@ -554,6 +557,8 @@ class AppPreferences {
     const val DEFAULT_SHIROIKUMA_BLACK = "#ff000000"
     const val DEFAULT_UI_SECONDARY_COLOR = "#99ffff00"
     private const val SHARED_PREFS_FONT_SCALE = "FontScale"
+    // device-local export/import directory for the 白い熊 Simplex UI page — never itself exported
+    private const val SHARED_PREFS_UI_EXPORT_DIRECTORY = "UiExportDirectory"
     private const val SHARED_PREFS_DENSITY_SCALE = "DensityScale"
     private const val SHARED_PREFS_IN_APP_BARS_ALPHA = "InAppBarsAlpha"
     private const val SHARED_PREFS_WHATS_NEW_VERSION = "WhatsNewVersion"
