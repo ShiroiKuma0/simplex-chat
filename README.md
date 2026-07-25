@@ -6,11 +6,11 @@
 
 **SimpleX Chat for Android that plays nice with dictionary keyboards — restyled black-yellow, customizable down to the tick.**
 
-A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **major additions**: an IME-commit-race fix that makes dictionary keyboards (Multiling O, Czech autocorrect, CJK input) work in the message field, the **白い熊 Simplex UI** page — every color, font, bubble, and tick in the app settable in one place, with export/import of the whole configuration **including your accounts** — and a black-yellow fork identity.
+A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **major additions**: an IME-commit-race fix that makes dictionary keyboards (Multiling O, Czech autocorrect, CJK input) work in the message field, the **白い熊 Simplex UI** page — every color, font, bubble, and tick in the app settable in one place, with export/import of the whole configuration **including your accounts**, backed up headlessly on request by an automation app — and a black-yellow fork identity.
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.0-beta.5+3`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.0-beta.6+3`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -34,6 +34,12 @@ The top of the UI page: pick an export directory once and it shows your latest e
 
 ---
 
+## 🤖 Backed up on command, without touching the phone
+
+The same export runs **headlessly** when an automation task asks for it. A token-gated broadcast — the token lives on the UI page, is copied with a tap, and is regenerable — makes the app write exactly one ZIP wherever the caller names, report progress in real counts (`区分 3/8 — Chat bubbles`, or `512 MB / 4.2 GB` while streaming the chat database), and reply with the written path and its exact size. Categories are selectable by id, down to sub-options such as the font files alone. Off by default; nothing responds until the switch is on.
+
+---
+
 ## ✔️ Customizable delivery ticks
 
 Scale the sent/received checkmarks from 1× to 15×, set their stroke thickness, and give sent and received ticks their own colors (defaults: light-blue sent, theme-yellow received). The ticks are redrawn as true vector strokes on a Canvas, so they stay crisp at any size instead of plateauing at the stock icon's intrinsic limit.
@@ -48,7 +54,7 @@ The launcher icon is restyled into the fork's black/yellow scheme — the Simple
 
 ## 📦 Tracks upstream fast, ships lean
 
-The fork rebases onto every new upstream release — **betas included** — usually days after it ships. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.0-beta.5+3`), with version codes that always sort above the corresponding upstream build.
+The fork rebases onto every new upstream release — **betas included** — usually days after it ships. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.0-beta.6+3`), with version codes that always sort above the corresponding upstream build.
 
 ---
 
