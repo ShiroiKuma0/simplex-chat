@@ -18,6 +18,12 @@
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
       tools:ignore="ScopedStorage" />
+  <!-- downstream (shiroikuma): the 保存復元 automation contract writes its backup ZIP into the
+       shared directory the calling task names (an absolute path), which scoped storage only
+       permits with All-Files-Access. Granted once by hand; nothing uses it until the
+       Automation export switch on the 白い熊 Simplex UI page is turned on. -->
+  <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+      tools:ignore="ScopedStorage" />
   <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
   <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
@@ -206,6 +212,19 @@
         android:name=".SimplexService$AutoRestartReceiver"
         android:enabled="true"
         android:exported="false" />
+
+    <!-- downstream (shiroikuma): 保存復元 headless state export, driven by 白い熊 自由作業盤.
+         No android:permission — the calling task cannot hold one, so the automation token
+         (device-local, default off) is the gate. -->
+    <receiver
+        android:name=".receivers.StateExportReceiver"
+        android:enabled="true"
+        android:exported="true">
+      <intent-filter>
+        <action android:name="${applicationId}.action.EXPORT_STATE" />
+        <action android:name="${applicationId}.action.LIST_CATEGORIES" />
+      </intent-filter>
+    </receiver>
 
     <!-- SimplexService restart on app update -->
     <receiver
