@@ -279,6 +279,11 @@ class AppPreferences {
   // directory the UI-page export/import writes to (Android: SAF tree URI string; desktop: plain
   // path). Device-local by design — deliberately excluded from every export category.
   val uiExportDirectory = mkStrPreference(SHARED_PREFS_UI_EXPORT_DIRECTORY, null)
+  // downstream (shiroikuma): the 保存復元 automation gate — sister apps may trigger a headless
+  // export through a token-gated broadcast. Both are device-local and deliberately excluded from
+  // every export category, so the token never travels inside a backup. See ShiroikumaAutomation.kt.
+  val automationEnabled = mkBoolPreference(SHARED_PREFS_AUTOMATION_ENABLED, false)
+  val automationToken = mkStrPreference(SHARED_PREFS_AUTOMATION_TOKEN, null)
   val fontScale = mkFloatPreference(SHARED_PREFS_FONT_SCALE, 1f)
   val densityScale = mkFloatPreference(SHARED_PREFS_DENSITY_SCALE, 1f)
   val inAppBarsDefaultAlpha = if (deviceSupportsBlur) 0.875f else 0.975f
@@ -559,6 +564,9 @@ class AppPreferences {
     private const val SHARED_PREFS_FONT_SCALE = "FontScale"
     // device-local export/import directory for the 白い熊 Simplex UI page — never itself exported
     private const val SHARED_PREFS_UI_EXPORT_DIRECTORY = "UiExportDirectory"
+    // device-local automation gate (保存復元 contract) — never exported, see ShiroikumaAutomation.kt
+    private const val SHARED_PREFS_AUTOMATION_ENABLED = "automation_enabled"
+    private const val SHARED_PREFS_AUTOMATION_TOKEN = "automation_token"
     private const val SHARED_PREFS_DENSITY_SCALE = "DensityScale"
     private const val SHARED_PREFS_IN_APP_BARS_ALPHA = "InAppBarsAlpha"
     private const val SHARED_PREFS_WHATS_NEW_VERSION = "WhatsNewVersion"
