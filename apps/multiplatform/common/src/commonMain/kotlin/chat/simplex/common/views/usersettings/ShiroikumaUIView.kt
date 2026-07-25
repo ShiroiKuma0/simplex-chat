@@ -12,7 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -61,6 +63,8 @@ fun ShiroikumaUIView() {
     // ── Export / Import ────────────────────────────────────────
     UIHeading("Export / Import", first = true)
     ExportImportRow(1)
+    AutomationSwitchRow(1)
+    AutomationTokenRow(1)
 
     // ── App colors ─────────────────────────────────────────────
     UIHeading("App colors")
@@ -171,6 +175,82 @@ private fun ExportImportRow(level: Int) {
         color = if (status.second) WARN_COLOR else MaterialTheme.colors.secondary
       )
     }
+  }
+}
+
+// downstream (shiroikuma): the 保存復元 automation rows — deliberately part of the
+// Export/Import section rather than a section of their own, so every sister app puts backup
+// automation in the same place. Default OFF; nothing is reachable until the switch is on.
+@Composable
+private fun AutomationSwitchRow(level: Int) {
+  val enabled = remember { appPrefs.automationEnabled.state }.value
+  Column {
+    UIRow(level, click = { appPrefs.automationEnabled.set(!enabled) }) {
+      Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+        Text("Automation export", fontSize = 15.sp)
+        Spacer(Modifier.height(1.dp))
+        Text(
+          "Sister-app tasks (保存復元) may trigger this app's export with the token below.",
+          fontSize = 13.sp,
+          color = MaterialTheme.colors.secondary
+        )
+      }
+      Switch(checked = enabled, onCheckedChange = { appPrefs.automationEnabled.set(it) })
+    }
+    // writing into the shared backup directory an automation task names needs All-Files-Access
+    val allFiles = if (enabled) hasAllFilesAccess() else null
+    if (allFiles == false) {
+      UIRow(level, click = { openAllFilesAccessSettings() }) {
+        Text(
+          "All-files access not granted — tap to grant it, or exports can only go to the directory chosen above.",
+          Modifier.weight(1f).padding(vertical = 4.dp),
+          fontSize = 13.sp,
+          color = WARN_COLOR
+        )
+      }
+    }
+  }
+}
+
+@Composable
+private fun AutomationTokenRow(level: Int) {
+  val clipboard = LocalClipboardManager.current
+  // read (and thus lazily generate) the token so the row always shows a value
+  val token = remember { mutableStateOf(AutomationAuth.token()) }
+  UIRow(level, click = {
+    clipboard.setText(AnnotatedString(token.value))
+    showToast("Automation token copied")
+  }) {
+    Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+      Text("Automation token", fontSize = 15.sp)
+      Spacer(Modifier.height(1.dp))
+      Text(
+        AutomationAuth.abbreviated(token.value),
+        fontSize = 13.sp,
+        color = MaterialTheme.colors.secondary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+      )
+    }
+    Text(
+      "Regenerate",
+      Modifier
+        .clickable {
+          AlertManager.shared.showAlertDialog(
+            title = "Regenerate token?",
+            text = "The current token stops working immediately. Every task that has it pasted — 自由作業盤's 保存復元の設定 — must be updated with the new one.",
+            confirmText = "Regenerate",
+            onConfirm = {
+              token.value = AutomationAuth.regenerate()
+              showToast("New automation token generated")
+            },
+            destructive = true,
+          )
+        }
+        .padding(start = 10.dp, top = 4.dp, bottom = 4.dp),
+      fontSize = 13.sp,
+      color = MaterialTheme.colors.primary
+    )
   }
 }
 
