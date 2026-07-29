@@ -223,6 +223,9 @@
       <intent-filter>
         <action android:name="${applicationId}.action.EXPORT_STATE" />
         <action android:name="${applicationId}.action.LIST_CATEGORIES" />
+        <!-- the cancel is routed through this exported receiver on purpose: the stop path a
+             third-party app must reach cannot live on a service, which stays not-exported -->
+        <action android:name="${applicationId}.action.CANCEL_EXPORT" />
       </intent-filter>
     </receiver>
 
