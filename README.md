@@ -10,7 +10,7 @@ A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **ma
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.0-beta.6+3`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.0-beta.6+12`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -40,9 +40,21 @@ The same export runs **headlessly** when an automation task asks for it. A token
 
 ---
 
-## ✔️ Customizable delivery ticks
+## ✔️ Delivery ticks, down to the glyph
 
-Scale the sent/received checkmarks from 1× to 15×, set their stroke thickness, and give sent and received ticks their own colors (defaults: light-blue sent, theme-yellow received). The ticks are redrawn as true vector strokes on a Canvas, so they stay crisp at any size instead of plateauing at the stock icon's intrinsic limit.
+Scale the sent/delivered indicators from 1× to 15×, set their stroke thickness, give each its own color — and now pick **what shape each one is**: single, double or triple tick, dot, tick in a circle, up arrow, clock, exclamation mark, or hidden. The picker previews every option at your configured size, color and thickness, drawn by the same code the chat footer uses, so what you choose is exactly what you get. Delivered defaults to a **dot** rather than a second tick — shape, not stroke count, tells the two rungs apart — with a dot-size multiplier (1–5 in tenths) to match its weight to a tick. Everything is redrawn as true vector strokes on a Canvas, so it stays crisp at any size instead of plateauing at the stock icon's intrinsic limit.
+
+---
+
+## 🖤 Truly black surfaces, marked in yellow
+
+Stock lifts "raised" dark surfaces by mixing a few percent of the text color into the background — which on a black/yellow theme comes out olive-green. Here every surface is pure black and separated by a **rounded yellow border** instead: the profile sheet, every settings card, the app bars, the one-hand chooser. The muted color that carries timestamps, delivery dots, date headers and toolbar icons was translucent yellow (`#99ffff00` — literally `#999900` over black); it is opaque `#FFFF00` now.
+
+---
+
+## 👆 Built for one hand on a big phone
+
+The **bottom** bar is 50% taller than stock — and only the bottom one — with its avatar and new-chat button scaled to match, so the tap targets are comfortable on a foldable. Every long-press shortcut into the UI page fires at 250 ms instead of the platform's sluggish default, without making message menus trigger by accident. **Private notes** is hidden from the chat list unless you switch it on, so the list holds only real conversations.
 
 ---
 
@@ -54,7 +66,7 @@ The launcher icon is restyled into the fork's black/yellow scheme — the Simple
 
 ## 📦 Tracks upstream fast, ships lean
 
-The fork rebases onto every new upstream release — **betas included** — usually days after it ships. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.0-beta.6+3`), with version codes that always sort above the corresponding upstream build.
+The fork rebases onto every new upstream release — **betas included** — usually days after it ships. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.0-beta.6+12`), with version codes that always sort above the corresponding upstream build.
 
 ---
 
