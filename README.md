@@ -10,7 +10,7 @@ A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **ma
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.0-beta.6+12`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.0+2`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -36,7 +36,9 @@ The top of the UI page: pick an export directory once and it shows your latest e
 
 ## 🤖 Backed up on command, without touching the phone
 
-The same export runs **headlessly** when an automation task asks for it. A token-gated broadcast — the token lives on the UI page, is copied with a tap, and is regenerable — makes the app write exactly one ZIP wherever the caller names, report progress in real counts (`区分 3/8 — Chat bubbles`, or `512 MB / 4.2 GB` while streaming the chat database), and reply with the written path and its exact size. Categories are selectable by id, down to sub-options such as the font files alone. Off by default; nothing responds until the switch is on.
+The same export runs **headlessly** when an automation task asks for it. A token-gated broadcast — the token lives on the UI page, is copied with a tap, and is regenerable — makes the app write exactly one ZIP wherever the caller names, report progress in real counts (`区分 3/8 — Chat bubbles`, or `512 MB / 4.2 GB` while streaming the chat database), and reply with the written path and its exact size. Categories are selectable by id, down to sub-options such as the font files alone, and the app *states* which ones should start ticked rather than leaving the caller to guess.
+
+A running export can also be **stopped from outside**, and stopping it means stopping it: the archive is written under a temporary name and only claims the real one once complete, so a cancelled run leaves the backup directory exactly as it found it — no half-written backup that looks finished. The check runs between the copy buffers of the chat database, not just between categories, so a cancel during a multi-gigabyte export takes effect in milliseconds instead of playing out to the end. Off by default; nothing responds until the switch is on.
 
 ---
 
@@ -66,7 +68,7 @@ The launcher icon is restyled into the fork's black/yellow scheme — the Simple
 
 ## 📦 Tracks upstream fast, ships lean
 
-The fork rebases onto every new upstream release — **betas included** — usually days after it ships. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.0-beta.6+12`), with version codes that always sort above the corresponding upstream build.
+The fork rebases onto every new upstream release — **betas included** — usually days after it ships, and this build sits on upstream **7.0** the day it landed. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.0+2`), with version codes that always sort above the corresponding upstream build.
 
 ---
 
