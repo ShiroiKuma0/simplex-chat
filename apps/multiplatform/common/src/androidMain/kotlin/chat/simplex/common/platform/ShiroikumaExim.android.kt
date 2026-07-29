@@ -99,3 +99,48 @@ actual fun uiExportDirCreateFile(dirUri: String, fileName: String): OutputStream
   Log.w(TAG, "uiExportDirCreateFile failed: ${e.message}")
   null
 }
+
+actual class UiExportPartFile actual constructor(
+  private val dirUri: String,
+  private val fileName: String,
+) {
+  private var uri: Uri? = null
+  private var committed = false
+
+  actual fun open(): OutputStream {
+    val parentDocUri = treeDocumentUri(dirUri) ?: error("the export directory is no longer reachable")
+    // octet-stream, not application/zip: a provider appends the extension its mime implies when
+    // the display name doesn't already end in one, which would turn "….zip.part" into
+    // "….zip.part.zip". With octet-stream the name is taken verbatim.
+    val created = DocumentsContract.createDocument(
+      androidAppContext.contentResolver, parentDocUri, "application/octet-stream", fileName + UI_EXPORT_PART_SUFFIX
+    ) ?: error("could not create a file in the export directory")
+    uri = created
+    return androidAppContext.contentResolver.openOutputStream(created)
+      ?: error("could not open the export file for writing")
+  }
+
+  actual fun commit(): Boolean {
+    val u = uri ?: return false
+    return try {
+      // null means "renamed, same URI"; a refusal arrives as an exception
+      DocumentsContract.renameDocument(androidAppContext.contentResolver, u, fileName)?.let { uri = it }
+      committed = true
+      true
+    } catch (e: Exception) {
+      Log.w(TAG, "renameDocument failed: ${e.message}")
+      false
+    }
+  }
+
+  actual fun discard() {
+    val u = uri ?: return
+    if (committed) return
+    uri = null
+    try {
+      DocumentsContract.deleteDocument(androidAppContext.contentResolver, u)
+    } catch (e: Exception) {
+      Log.w(TAG, "deleteDocument failed: ${e.message}")
+    }
+  }
+}

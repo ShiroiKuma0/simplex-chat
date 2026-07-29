@@ -63,7 +63,14 @@ internal val WARN_COLOR = Color(0xFFFF5252)
 
 // ───────────────────────── categories ─────────────────────────
 
-enum class UiEximCategory(val id: String, val label: String) {
+// `defaultSelected` is this app's own answer to "does this item start ticked?" — sent as the
+// fourth field of LIST_CATEGORIES and used to seed the panel below, so 保存復元's item editor
+// and the in-app sheet open on the same set instead of the picker guessing.
+//
+// Everything here is `on`. An item starts unticked only when what it holds is large, derived
+// AND re-creatable (downloaded map tiles, a regenerable thumbnail cache); this app exports
+// nothing of that kind.
+enum class UiEximCategory(val id: String, val label: String, val defaultSelected: Boolean = true) {
   ACCOUNTS("accounts", "Accounts"),
   APP_COLORS("app_colors", "App colors"),
   FONT("font", "Font"),
@@ -76,15 +83,23 @@ enum class UiEximCategory(val id: String, val label: String) {
 // The one category with independently selectable parts: Font carries both the font settings
 // and the installed .ttf/.otf files, which are far bigger than everything else combined.
 const val UI_EXIM_FONT_FILES_ID = "font.files"
+// Ticked despite that size: an imported .ttf is a user file this app cannot re-create, so it
+// fails the "derived and re-creatable" test the same way every other item does.
+private const val UI_EXIM_FONT_FILES_DEFAULT = true
 
 /** One selectable item of `LIST_CATEGORIES` / `items`: a category, or a part of one. */
-data class UiEximItem(val id: String, val label: String, val parentId: String?)
+data class UiEximItem(
+  val id: String,
+  val label: String,
+  val parentId: String?,
+  val defaultSelected: Boolean = true,
+)
 
 fun uiEximItems(): List<UiEximItem> = buildList {
   for (cat in UiEximCategory.entries) {
-    add(UiEximItem(cat.id, cat.label, null))
+    add(UiEximItem(cat.id, cat.label, null, cat.defaultSelected))
     if (cat == UiEximCategory.FONT) {
-      add(UiEximItem(UI_EXIM_FONT_FILES_ID, "Font files (.ttf/.otf)", cat.id))
+      add(UiEximItem(UI_EXIM_FONT_FILES_ID, "Font files (.ttf/.otf)", cat.id, UI_EXIM_FONT_FILES_DEFAULT))
     }
   }
 }
@@ -102,20 +117,24 @@ class UiEximSelection(val cats: Set<UiEximCategory>, val fontFiles: Boolean) {
     .map { it.id }
 
   companion object {
-    fun everything() = UiEximSelection(UiEximCategory.entries.toSet(), true)
+    /** What an absent `items` extra means: exactly the items marked `on` above. */
+    fun defaults() = UiEximSelection(
+      UiEximCategory.entries.filter { it.defaultSelected }.toSet(),
+      UI_EXIM_FONT_FILES_DEFAULT,
+    )
 
     /** The panel's checkbox list is per category; ticking Font takes its files along. */
     fun ofCategories(cats: Set<UiEximCategory>) =
       UiEximSelection(cats, UiEximCategory.FONT in cats)
 
     /**
-     * Parses the automation `items` extra. Absent/blank selects everything.
+     * Parses the automation `items` extra. Absent/blank selects this app's default set.
      * @throws IllegalArgumentException naming every unknown id.
      */
     fun parse(items: String?): UiEximSelection {
-      if (items.isNullOrBlank()) return everything()
+      if (items.isNullOrBlank()) return defaults()
       val requested = items.split(',').map { it.trim() }.filter { it.isNotEmpty() }
-      if (requested.isEmpty()) return everything()
+      if (requested.isEmpty()) return defaults()
       val known = uiEximItems().associateBy { it.id }
       val unknown = requested.filter { it !in known }
       if (unknown.isNotEmpty()) {
@@ -134,6 +153,26 @@ class UiEximSelection(val cats: Set<UiEximCategory>, val fontFiles: Boolean) {
 typealias UiEximProgress = (current: Long, total: Long, unit: String, text: String) -> Unit
 
 private val NO_PROGRESS: UiEximProgress = { _, _, _, _ -> }
+
+/**
+ * Polled by the export at every boundary it can safely unwind from — between ZIP entries, and
+ * between the copy buffers of the accounts archive, which is far too big to wait out. Nothing
+ * is ever interrupted mid-write; the flag is only read.
+ */
+typealias UiEximCancelled = () -> Boolean
+
+private val NOT_CANCELLED: UiEximCancelled = { false }
+
+/**
+ * Raised when [UiEximCancelled] reports a cancel. Carries the exact wording the 保存復元
+ * contract's terminal reply uses, so the caller's `ERROR:${message}` reads `ERROR:cancelled`.
+ * Whoever opened the output file deletes it as it unwinds.
+ */
+class UiExportCancelledException: Exception("cancelled")
+
+private fun checkCancel(isCancelled: UiEximCancelled) {
+  if (isCancelled()) throw UiExportCancelledException()
+}
 
 /** `4.6 MB`, `1.20 GB` — for display beside the exact byte count. */
 fun uiHumanSize(bytes: Long): String = when {
@@ -225,6 +264,7 @@ private fun writeUiExportZip(
   out: OutputStream,
   accountsArchive: File?,
   onProgress: UiEximProgress,
+  isCancelled: UiEximCancelled,
 ) {
   val total = sel.itemCount.toLong()
   var done = 0L
@@ -246,6 +286,7 @@ private fun writeUiExportZip(
     entry("manifest.json", manifest.toString().toByteArray())
     for (cat in UiEximCategory.entries) {
       if (cat !in sel.cats) continue
+      checkCancel(isCancelled)
       if (cat == UiEximCategory.ACCOUNTS) {
         // streamed, not read into memory — the chat archive can be hundreds of MB, so this is
         // also the one place worth reporting byte progress from
@@ -258,6 +299,9 @@ private fun writeUiExportZip(
             while (true) {
               val n = ins.read(buf)
               if (n <= 0) break
+              // between buffers, not just between entries: this copy alone can run for minutes,
+              // and a cancel that waited it out would deliver the backup 白い熊 had stopped
+              checkCancel(isCancelled)
               zip.write(buf, 0, n)
               copied += n
               onProgress(copied, size, "バイト", "${uiHumanSize(copied)} / ${uiHumanSize(size)}")
@@ -281,6 +325,7 @@ private fun writeUiExportZip(
     // the font files are their own selectable item, independent of the font settings
     if (sel.fontFiles) {
       for (f in fontsDir.listFiles()?.filter { it.isFile } ?: emptyList()) {
+        checkCancel(isCancelled)
         entry("fonts/${f.name}", f.readBytes())
       }
       step("Font files")
@@ -396,18 +441,23 @@ private suspend fun writeExport(
   sel: UiEximSelection,
   openOut: () -> OutputStream,
   onProgress: UiEximProgress,
+  isCancelled: UiEximCancelled = NOT_CANCELLED,
 ): UiExportOutcome {
   var accountsErrors = 0
   var archive: File? = null
   try {
+    checkCancel(isCancelled)
     if (UiEximCategory.ACCOUNTS in sel.cats) {
       val exportDir = File(tmpDir, "ui-exim").also { it.mkdirs() }
       val (path, errs) = exportChatArchive(chatModel, exportDir, mutableStateOf(null))
       accountsErrors = errs.size
       archive = File(path)
+      // upstream's archive export runs to completion whatever we do — but it writes only into
+      // tmpDir, so bailing here still costs the caller nothing: openOut() has yet to be called
+      checkCancel(isCancelled)
     }
     withContext(Dispatchers.IO) {
-      openOut().use { writeUiExportZip(sel, it, archive, onProgress) }
+      openOut().use { writeUiExportZip(sel, it, archive, onProgress, isCancelled) }
     }
   } finally {
     archive?.delete()
@@ -424,6 +474,7 @@ suspend fun runHeadlessUiExport(
   sel: UiEximSelection,
   openOut: () -> OutputStream,
   onProgress: UiEximProgress = NO_PROGRESS,
+  isCancelled: UiEximCancelled = NOT_CANCELLED,
 ): UiExportOutcome {
   if (sel.isEmpty()) throw IllegalArgumentException("no categories selected")
   val needsChatStop = UiEximCategory.ACCOUNTS in sel.cats
@@ -434,7 +485,7 @@ suspend fun runHeadlessUiExport(
   val wasRunning = needsChatStop && chatModel.chatRunning.value != false
   if (wasRunning) stopChatAsync(chatModel)
   try {
-    return writeExport(sel, openOut, onProgress)
+    return writeExport(sel, openOut, onProgress, isCancelled)
   } finally {
     if (wasRunning) {
       startChat(chatModel, mutableStateOf(appPrefs.chatLastStart.get()), chatModel.chatDbChanged, null)
@@ -445,8 +496,11 @@ suspend fun runHeadlessUiExport(
 // ───────────────────────── panel ─────────────────────────
 
 private class UiEximState {
+  // seeded from the same `defaultSelected` flags LIST_CATEGORIES sends, so this sheet and
+  // 保存復元's item editor open on the same set. The rows are per category — Font's files have
+  // no row of their own and follow their parent (UiEximSelection.ofCategories).
   val checks = mutableStateMapOf<UiEximCategory, Boolean>().apply {
-    UiEximCategory.entries.forEach { put(it, true) }
+    UiEximCategory.entries.forEach { put(it, it.defaultSelected) }
   }
   // bumped after a directory pick or an export so the status line recomputes
   val refresh = mutableStateOf(0)

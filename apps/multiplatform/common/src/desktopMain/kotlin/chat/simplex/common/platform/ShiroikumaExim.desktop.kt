@@ -47,3 +47,22 @@ actual fun uiExportDirCreateFile(dirUri: String, fileName: String): OutputStream
 } catch (e: Exception) {
   null
 }
+
+actual class UiExportPartFile actual constructor(dirUri: String, fileName: String) {
+  private val target = File(File(dirUri), fileName)
+  private val part = File(File(dirUri), fileName + UI_EXPORT_PART_SUFFIX)
+  private var opened = false
+  private var committed = false
+
+  actual fun open(): OutputStream = FileOutputStream(part).also { opened = true }
+
+  actual fun commit(): Boolean {
+    if (target.exists()) target.delete()
+    committed = part.renameTo(target)
+    return committed
+  }
+
+  actual fun discard() {
+    if (opened && !committed) part.delete()
+  }
+}
