@@ -161,7 +161,7 @@ private fun ScrollBar(
   val padding = if (additionalBarHeight != null) {
     PaddingValues(top = topBarPadding + if (oneHandUI.value && chatBottomBar.value) 0.dp else AppBarHeight * fontSizeSqrtMultiplier, bottom = additionalBarHeight.value)
   } else if (reverseLayout) {
-    PaddingValues(bottom = AppBarHeight * fontSizeSqrtMultiplier)
+    PaddingValues(bottom = BottomAppBarHeight * fontSizeSqrtMultiplier)
   } else {
     PaddingValues(top = if (oneHandUI.value && chatBottomBar.value) 0.dp else AppBarHeight * fontSizeSqrtMultiplier)
   }
@@ -219,7 +219,7 @@ actual fun ColumnWithScrollBar(
   val modifier = if (fillMaxSize) Modifier.fillMaxSize().then(modifier) else modifier
   Box(Modifier.nestedScroll(connection)) {
     val oneHandUI = remember { derivedStateOf { if (appPrefs.onboardingStage.state.value == OnboardingStage.OnboardingComplete) appPrefs.oneHandUI.state.value else false } }
-    val padding = if (oneHandUI.value) PaddingValues(bottom = AppBarHeight * fontSizeSqrtMultiplier) else PaddingValues(top = AppBarHeight * fontSizeSqrtMultiplier)
+    val padding = if (oneHandUI.value) PaddingValues(bottom = BottomAppBarHeight * fontSizeSqrtMultiplier) else PaddingValues(top = AppBarHeight * fontSizeSqrtMultiplier)
     Column(
       if (maxIntrinsicSize) {
         modifier.copyViewToAppBar(remember { appPrefs.appearanceBarsBlurRadius.state }.value, LocalAppBarHandler.current?.graphicsLayer).verticalScroll(state).height(IntrinsicSize.Max).then(scrollModifier)

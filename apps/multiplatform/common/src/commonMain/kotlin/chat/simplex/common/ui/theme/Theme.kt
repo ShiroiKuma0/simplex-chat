@@ -614,13 +614,18 @@ fun canvasColorForCurrentTheme(): Color {
 }
 
 // Card background color for SectionView. LIGHT: pure white (raised above the
-// off-white canvas). DARK/BLACK/SIMPLEX: founder's mixWith formula (lifts cards
-// above palette bg using onBackground tint).
+// off-white canvas).
+// downstream (shiroikuma): stock lifts dark cards with 5% of onBackground, which on the
+// black/yellow theme paints every settings group olive-green. Cards stay pure black here — they
+// are separated from the canvas by the accent border drawn in Section.kt instead.
 fun sectionCardColor(): Color {
   val theme = CurrentColors.value
-  return if (theme.base == DefaultTheme.LIGHT) Color.White
-  else theme.colors.background.mixWith(theme.colors.onBackground, 0.95f)
+  return if (theme.base == DefaultTheme.LIGHT) Color.White else theme.colors.background
 }
+
+// downstream (shiroikuma): rounded accent outline + row divider for those now-black section cards
+fun sectionCardBorderColor(): Color = CurrentColors.value.colors.primary
+fun sectionCardDividerColor(): Color = CurrentColors.value.colors.primary.copy(alpha = 0.35f)
 
 fun Modifier.themedBackground(baseTheme: DefaultTheme = CurrentColors.value.base, bgLayerSize: MutableState<IntSize>?, bgLayer: GraphicsLayer?, overrideColor: Color? = null): Modifier {
   return drawBehind {
