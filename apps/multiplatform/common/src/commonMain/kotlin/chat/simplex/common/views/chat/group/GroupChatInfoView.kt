@@ -563,7 +563,7 @@ fun ModalData.GroupChatInfoLayout(
             selectedItemsBarHeight +
             // TODO: that's workaround but works. Actually, something in the codebase doesn't consume padding for AppBar and it produce
             // different padding when the user has NavigationBar and doesn't have it with ime shown (developer options helps to test it nav bars)
-            (if (navBarPadding > 0.dp && imePadding > 0.dp) 0.dp else AppBarHeight * fontSizeSqrtMultiplier)
+            (if (navBarPadding > 0.dp && imePadding > 0.dp) 0.dp else BottomAppBarHeight * fontSizeSqrtMultiplier)
       )
     } else {
       PaddingValues(
@@ -895,7 +895,7 @@ private fun BoxScope.SelectedItemsButtonsToolbar(chat: Chat, groupInfo: GroupInf
     }
     if (oneHandUI.value) {
       // That's placeholder to take some space for bottom app bar in oneHandUI
-      Box(Modifier.height(AppBarHeight * fontSizeSqrtMultiplier))
+      Box(Modifier.height(BottomAppBarHeight * fontSizeSqrtMultiplier))
     }
   }
 }

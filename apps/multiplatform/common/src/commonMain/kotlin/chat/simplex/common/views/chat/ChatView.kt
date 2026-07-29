@@ -1079,7 +1079,7 @@ fun ChatLayout(
               }
               if (oneHandUI.value) {
                 // That's placeholder to take some space for bottom app bar in oneHandUI
-                Box(Modifier.height(AppBarHeight * fontSizeSqrtMultiplier))
+                Box(Modifier.height(BottomAppBarHeight * fontSizeSqrtMultiplier))
               }
             }
           } else {
@@ -1089,7 +1089,7 @@ fun ChatLayout(
                 .align(Alignment.BottomCenter)
                 .imePadding()
                 .navigationBarsPadding()
-                .then(if (oneHandUI.value && chatBottomBar.value) Modifier.padding(bottom = AppBarHeight * fontSizeSqrtMultiplier) else Modifier)
+                .then(if (oneHandUI.value && chatBottomBar.value) Modifier.padding(bottom = BottomAppBarHeight * fontSizeSqrtMultiplier) else Modifier)
             ) {
               composeView(composeViewFocusRequester)
             }
@@ -1821,7 +1821,7 @@ fun BoxScope.ChatItemsList(
    * [composeViewHeight] is unknown, but we need to set scroll position for unread messages already so it will be correct before the first frame appears
    * */
   val maxHeightForList = rememberUpdatedState(
-    with(LocalDensity.current) { LocalWindowHeight().roundToPx() - topPaddingToContentPx.value - (AppBarHeight * fontSizeSqrtMultiplier * numberOfBottomAppBars).roundToPx() }
+    with(LocalDensity.current) { LocalWindowHeight().roundToPx() - topPaddingToContentPx.value - (BottomAppBarHeight * fontSizeSqrtMultiplier * numberOfBottomAppBars).roundToPx() }
   )
   val resetListState = remember { mutableStateOf(false) }
   remember(chatModel.openAroundItemId.value) {

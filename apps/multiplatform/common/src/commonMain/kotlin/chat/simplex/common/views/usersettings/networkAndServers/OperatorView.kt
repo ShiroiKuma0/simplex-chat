@@ -842,7 +842,7 @@ fun ConditionsLinkButton() {
   val uriHandler = LocalUriHandler.current
   val oneHandUI = remember { appPrefs.oneHandUI.state }
   Column {
-    DefaultDropdownMenu(showMenu, offset = if (oneHandUI.value) DpOffset(0.dp, -AppBarHeight * fontSizeSqrtMultiplier * 3) else DpOffset.Zero) {
+    DefaultDropdownMenu(showMenu, offset = if (oneHandUI.value) DpOffset(0.dp, -BottomAppBarHeight * fontSizeSqrtMultiplier * 3) else DpOffset.Zero) {
       val commit = chatModel.conditions.value.currentConditions.conditionsCommit
       ItemAction(stringResource(MR.strings.operator_open_conditions), painterResource(MR.images.ic_draft), onClick = {
         val mdUrl = "https://github.com/simplex-chat/simplex-chat/blob/$commit/PRIVACY.md"

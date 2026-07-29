@@ -85,9 +85,9 @@ fun TerminalLayout(
           .layoutId(CONSOLE_COMPOSE_LAYOUT_ID)
           .align(Alignment.BottomCenter)
           .navigationBarsPadding()
-          .consumeWindowInsets(PaddingValues(bottom = if (oneHandUI.value) AppBarHeight * fontSizeSqrtMultiplier else 0.dp))
+          .consumeWindowInsets(PaddingValues(bottom = if (oneHandUI.value) BottomAppBarHeight * fontSizeSqrtMultiplier else 0.dp))
           .imePadding()
-          .padding(bottom = if (oneHandUI.value) AppBarHeight * fontSizeSqrtMultiplier else 0.dp)
+          .padding(bottom = if (oneHandUI.value) BottomAppBarHeight * fontSizeSqrtMultiplier else 0.dp)
           .background(MaterialTheme.colors.background)
       ) {
         Divider()

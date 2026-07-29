@@ -40,7 +40,9 @@ fun DefaultAppBar(
   } else if (!onTop) Modifier.imePadding()
   else Modifier
 
-  val themeBackgroundMix = MaterialTheme.colors.background.mixWith(MaterialTheme.colors.onBackground, 0.97f)
+  // downstream (shiroikuma): stock tints the bar with 3% onBackground — olive on the black/yellow
+  // theme; the bars stay pure black
+  val themeBackgroundMix = MaterialTheme.colors.background
   val prefAlpha = remember { appPrefs.inAppBarsAlpha.state }
   val handler = LocalAppBarHandler.current
   val connection = LocalAppBarHandler.current?.connection
@@ -75,7 +77,7 @@ fun DefaultAppBar(
       Modifier
         .fillMaxWidth()
         .then(if (!onTop) Modifier.navigationBarsPadding() else Modifier)
-        .heightIn(min = AppBarHeight * fontSizeSqrtMultiplier)
+        .heightIn(min = (if (onTop) AppBarHeight else BottomAppBarHeight) * fontSizeSqrtMultiplier)
     ) {
       AppBar(
         title = {
@@ -188,7 +190,7 @@ private fun AppBar(
 ) {
   val adjustedModifier = modifier
     .then(if (onTop) Modifier.statusBarsPadding() else Modifier)
-    .height(AppBarHeight * fontSizeSqrtMultiplier)
+    .height((if (onTop) AppBarHeight else BottomAppBarHeight) * fontSizeSqrtMultiplier)
     .fillMaxWidth()
     .padding(horizontal = AppBarHorizontalPadding)
   if (centered) {
@@ -266,5 +268,11 @@ private fun topTitleAlpha(text: Boolean, connection: CollapsingAppBarNestedScrol
   else if (connection.appBarOffset.absoluteValue < AppBarHandler.appBarMaxHeightPx / 3) 0f
   else ((-connection.appBarOffset * 1.5f) / (AppBarHandler.appBarMaxHeightPx)).coerceIn(0f, if (text) 1f else alpha)
 
+// downstream (shiroikuma): only the BOTTOM app bar is 50% taller than stock (56 -> 84), so its
+// icons are comfortable to hit on the Mate XT; every top bar keeps the stock height. Layouts that
+// reserve space for a bottom bar use BottomAppBarHeight, top bars use AppBarHeight, and
+// BAR_CONTENT_SCALE scales the bottom bar's own avatar and new-chat button to match.
+const val BAR_CONTENT_SCALE = 1.5f
 val AppBarHeight = 56.dp
+val BottomAppBarHeight = AppBarHeight * BAR_CONTENT_SCALE
 val AppBarHorizontalPadding = 2.dp

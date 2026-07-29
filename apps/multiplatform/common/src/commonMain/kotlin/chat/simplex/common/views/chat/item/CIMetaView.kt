@@ -28,32 +28,90 @@ import kotlin.math.roundToInt
 // downstream (shiroikuma): base height of the sent/received delivery ticks, scaled by appPreferences.messageTickScale
 const val BASE_TICK_HEIGHT_DP = 17f
 
-// downstream (shiroikuma): the sent (single) / received (double) delivery ticks, drawn ourselves as stroked
-// check paths instead of the stock vector Icons. This makes size = canvas size (scales freely, no ContentScale
-// cap, no bubble clipping) and thickness = stroke width (a real weight, not a multiplied/ghosted icon).
-// `thickness` (0..n) adds to a baseline stroke fraction; 0 ≈ the stock check weight.
+// downstream (shiroikuma): the glyph each delivery state draws. Ported from the ArcaneChat fork's
+// tick work — there the glyphs are vector drawables, here they are the same stroked paths the
+// footer already drew, so a settings preview renders through the exact code path the chat uses and
+// cannot drift from it. `widthFactor` is the glyph's width as a multiple of the tick height.
+enum class TickGlyph(val key: String, val label: String, val widthFactor: Float) {
+  TICK1("tick1", "Single tick", 1f),
+  TICK2("tick2", "Double tick", 1.5f),
+  TICK3("tick3", "Triple tick", 2f),
+  DOT("dot", "Dot", 1f),
+  CIRCLE_TICK("circle_check", "Tick in a circle", 1f),
+  ARROW_UP("arrow_up", "Up arrow", 1f),
+  CLOCK("clock", "Clock", 1f),
+  BANG("bang", "Exclamation mark", 1f),
+  NONE("none", "Hidden", 0f);
+
+  companion object {
+    fun from(key: String?, fallback: TickGlyph = TICK1): TickGlyph =
+      values().firstOrNull { it.key == key } ?: fallback
+  }
+}
+
+// downstream (shiroikuma): the sent / delivered delivery ticks, drawn ourselves as stroked paths
+// instead of the stock vector Icons. This makes size = canvas size (scales freely, no ContentScale
+// cap, no bubble clipping) and thickness = stroke width (a real weight, not a multiplied/ghosted
+// icon). `thickness` (0..n) adds to a baseline stroke fraction; 0 ≈ the stock check weight.
 @Composable
-fun TickIcon(double: Boolean, color: Color, sizeDp: Float, thickness: Float) {
+fun TickIcon(glyph: TickGlyph, color: Color, sizeDp: Float, thickness: Float) {
+  if (glyph == TickGlyph.NONE) return
   val h = sizeDp.coerceAtLeast(1f)
-  val checkW = h                        // each check occupies an h-wide box
-  val secondOffset = h * 0.5f           // the second check of a double tick overlaps the first
-  val widthDp = if (double) checkW + secondOffset else checkW
-  Canvas(Modifier.size(widthDp.dp, h.dp)) {
+  // downstream (shiroikuma): the dot is a fraction of the tick box, so at a tick size that looks
+  // right it reads far too small next to one. Its multiplier is read here rather than passed in, so
+  // the chat footer, the settings previews and the glyph picker can never disagree about it. The
+  // canvas grows with the dot when the multiplier pushes it past the tick box.
+  val dotScale = remember { appPreferences.messageTickDotScale.state }.value.coerceAtLeast(0.1f)
+  val dotFraction = (0.36f + thickness * 0.06f) * dotScale   // dot diameter as a fraction of h
+  val w = if (glyph == TickGlyph.DOT) maxOf(h, h * dotFraction) else h * glyph.widthFactor
+  val canvasH = if (glyph == TickGlyph.DOT) maxOf(h, h * dotFraction) else h
+  Canvas(Modifier.size(w.dp, canvasH.dp)) {
     val sw = size.height * (0.12f + thickness * 0.045f)   // baseline 0.12, grows with thickness
     val st = Stroke(width = sw, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    fun check(ox: Float): Path {
-      val m = sw / 2f                    // inset so round caps aren't clipped at the edges
-      val left = ox + m; val right = ox + checkW.dp.toPx() - m
-      val top = m; val bot = size.height - m
-      val w = right - left; val hh = bot - top
-      return Path().apply {
-        moveTo(left + 0.05f * w, top + 0.55f * hh)
-        lineTo(left + 0.38f * w, top + 0.95f * hh)
-        lineTo(left + 0.95f * w, top + 0.05f * hh)
-      }
+    val m = sw / 2f                      // inset so round caps aren't clipped at the edges
+    val box = h.dp.toPx()                // each tick occupies an h-wide box
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+    fun checkIn(left: Float, top: Float, w: Float, hh: Float): Path = Path().apply {
+      moveTo(left + 0.05f * w, top + 0.55f * hh)
+      lineTo(left + 0.38f * w, top + 0.95f * hh)
+      lineTo(left + 0.95f * w, top + 0.05f * hh)
     }
-    drawPath(check(0f), color = color, style = st)
-    if (double) drawPath(check(secondOffset.dp.toPx()), color = color, style = st)
+    // each further check of a multi-tick overlaps the previous one by half a box
+    fun check(index: Int): Path =
+      checkIn(index * box * 0.5f + m, m, box - 2 * m, size.height - 2 * m)
+    fun stroke(path: Path) = drawPath(path, color = color, style = st)
+    when (glyph) {
+      TickGlyph.TICK1 -> stroke(check(0))
+      TickGlyph.TICK2 -> repeat(2) { stroke(check(it)) }
+      TickGlyph.TICK3 -> repeat(3) { stroke(check(it)) }
+      TickGlyph.DOT -> drawCircle(color, radius = box * dotFraction / 2f, center = androidx.compose.ui.geometry.Offset(cx, cy))
+      TickGlyph.CIRCLE_TICK -> {
+        val r = size.minDimension / 2f - m
+        drawCircle(color, radius = r, center = androidx.compose.ui.geometry.Offset(cx, cy), style = st)
+        stroke(checkIn(cx - r * 0.62f, cy - r * 0.55f, r * 1.24f, r * 1.1f))
+      }
+      TickGlyph.ARROW_UP -> {
+        val head = (size.width - 2 * m) * 0.32f
+        stroke(Path().apply { moveTo(cx, size.height - m); lineTo(cx, m) })
+        stroke(Path().apply {
+          moveTo(cx - head, m + head)
+          lineTo(cx, m)
+          lineTo(cx + head, m + head)
+        })
+      }
+      TickGlyph.CLOCK -> {
+        val r = size.minDimension / 2f - m
+        drawCircle(color, radius = r, center = androidx.compose.ui.geometry.Offset(cx, cy), style = st)
+        stroke(Path().apply { moveTo(cx, cy); lineTo(cx, cy - r * 0.58f) })
+        stroke(Path().apply { moveTo(cx, cy); lineTo(cx + r * 0.45f, cy) })
+      }
+      TickGlyph.BANG -> {
+        stroke(Path().apply { moveTo(cx, m); lineTo(cx, size.height * 0.62f) })
+        drawCircle(color, radius = sw * 0.6f, center = androidx.compose.ui.geometry.Offset(cx, size.height - m - sw * 0.6f))
+      }
+      TickGlyph.NONE -> {}
+    }
   }
 }
 
@@ -140,18 +198,23 @@ private fun CIMetaText(
       val (icon, statusColor) = statusIcon
       val status = meta.itemStatus
       if (status is CIStatus.SndSent || status is CIStatus.SndRcvd) {
-        // downstream (shiroikuma): user-configurable size, thickness and color of the sent/received delivery ticks
+        // downstream (shiroikuma): user-configurable size, thickness, color and glyph of the
+        // sent/delivered delivery ticks
         val tickScale = remember { appPreferences.messageTickScale.state }.value
         val tickThickness = remember { appPreferences.messageTickThickness.state }.value
         val sentColor = remember { appPreferences.messageTickSentColor.state }.value?.colorFromReadableHex()
         val rcvdColor = remember { appPreferences.messageTickReceivedColor.state }.value?.colorFromReadableHex()
+        val delivered = status is CIStatus.SndRcvd
         val tickColor = when {
           status is CIStatus.SndSent -> sentColor ?: statusColor
-          // keep the red "bad message hash" warning regardless of the custom received color
-          status is CIStatus.SndRcvd && statusColor != Color.Red -> rcvdColor ?: statusColor
+          // keep the red "bad message hash" warning regardless of the custom delivered color
+          delivered && statusColor != Color.Red -> rcvdColor ?: statusColor
           else -> statusColor
         }
-        TickIcon(double = status is CIStatus.SndRcvd, color = tickColor, sizeDp = BASE_TICK_HEIGHT_DP * tickScale, thickness = tickThickness)
+        val sentGlyph = remember { appPreferences.messageTickSentGlyph.state }.value
+        val deliveredGlyph = remember { appPreferences.messageTickDeliveredGlyph.state }.value
+        val glyph = if (delivered) TickGlyph.from(deliveredGlyph, TickGlyph.DOT) else TickGlyph.from(sentGlyph, TickGlyph.TICK1)
+        TickIcon(glyph = glyph, color = tickColor, sizeDp = BASE_TICK_HEIGHT_DP * tickScale, thickness = tickThickness)
       } else {
         StatusIconText(painterResource(icon), statusColor)
       }

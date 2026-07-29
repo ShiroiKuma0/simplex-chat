@@ -39,6 +39,17 @@ class FifoQueue<E>(private var capacity: Int) : LinkedList<E>() {
 
 // LALAL VERSION CODE
 fun runMigrations() {
+  // downstream (shiroikuma): one-shot, outside the version-code chain (the fork's injected code is
+  // far past every branch below). The muted colour was yellow at 60% alpha, which over black reads
+  // olive rather than dimmed; anyone still carrying that exact value gets the opaque default. A
+  // deliberately chosen colour is left alone — only the old default is rewritten.
+  val secondaryOpaque = ChatController.appPrefs.secondaryOpaqueApplied
+  if (!secondaryOpaque.get()) {
+    if (ChatController.appPrefs.uiSecondaryColor.get() == AppPreferences.LEGACY_UI_SECONDARY_COLOR) {
+      ChatController.appPrefs.uiSecondaryColor.set(AppPreferences.DEFAULT_UI_SECONDARY_COLOR)
+    }
+    secondaryOpaque.set(true)
+  }
   val lastMigration = ChatController.appPrefs.lastMigratedVersionCode
   if (lastMigration.get() < BuildConfigCommon.ANDROID_VERSION_CODE) {
     while (true) {
