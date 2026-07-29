@@ -249,9 +249,19 @@ class AppPreferences {
   val messageTickThickness = mkFloatPreference(SHARED_PREFS_MESSAGE_TICK_THICKNESS, 0f)
   val messageTickSentColor = mkStrPreference(SHARED_PREFS_MESSAGE_TICK_SENT_COLOR, DEFAULT_MESSAGE_TICK_SENT_COLOR)
   val messageTickReceivedColor = mkStrPreference(SHARED_PREFS_MESSAGE_TICK_RECEIVED_COLOR, null)
+  // glyph drawn for each state (TickGlyph.key). The delivered rung defaults to a dot, not a second
+  // tick: shape, not stroke count, carries the distinction (same call as the ArcaneChat fork).
+  // the dot glyph is a fraction of the tick box, so it needs its own multiplier to sit next to a
+  // tick at a matching visual weight (1 = stock dot, ~2.8 ≈ as tall as a tick)
+  val messageTickDotScale = mkFloatPreference(SHARED_PREFS_MESSAGE_TICK_DOT_SCALE, 1f)
+  val messageTickSentGlyph = mkStrPreference(SHARED_PREFS_MESSAGE_TICK_SENT_GLYPH, DEFAULT_MESSAGE_TICK_SENT_GLYPH)
+  val messageTickDeliveredGlyph = mkStrPreference(SHARED_PREFS_MESSAGE_TICK_DELIVERED_GLYPH, DEFAULT_MESSAGE_TICK_DELIVERED_GLYPH)
   // downstream (shiroikuma): chat-list name color and chat bubble colors (background/text/border,
   // separate for sent and received). Readable-hex strings; null = follow the theme (stock look).
   val chatListNameColor = mkStrPreference(SHARED_PREFS_CHAT_LIST_NAME_COLOR, DEFAULT_SHIROIKUMA_YELLOW)
+  // downstream (shiroikuma): the "Private notes" chat is kept out of the chat list unless this is
+  // switched on (it still shows while it is the open chat, and under the Notes filter)
+  val showPrivateNotes = mkBoolPreference(SHARED_PREFS_SHOW_PRIVATE_NOTES, false)
   val bubbleSentBackgroundColor = mkStrPreference(SHARED_PREFS_BUBBLE_SENT_BACKGROUND_COLOR, DEFAULT_BUBBLE_BACKGROUND_COLOR)
   val bubbleSentTextColor = mkStrPreference(SHARED_PREFS_BUBBLE_SENT_TEXT_COLOR, DEFAULT_SHIROIKUMA_YELLOW)
   val bubbleSentBorderColor = mkStrPreference(SHARED_PREFS_BUBBLE_SENT_BORDER_COLOR, DEFAULT_SHIROIKUMA_YELLOW)
@@ -282,6 +292,8 @@ class AppPreferences {
   // downstream (shiroikuma): the 保存復元 automation gate — sister apps may trigger a headless
   // export through a token-gated broadcast. Both are device-local and deliberately excluded from
   // every export category, so the token never travels inside a backup. See ShiroikumaAutomation.kt.
+  // one-shot: rewrite a stored legacy translucent secondary colour to the opaque default
+  val secondaryOpaqueApplied = mkBoolPreference(SHARED_PREFS_SECONDARY_OPAQUE_APPLIED, false)
   val automationEnabled = mkBoolPreference(SHARED_PREFS_AUTOMATION_ENABLED, false)
   val automationToken = mkStrPreference(SHARED_PREFS_AUTOMATION_TOKEN, null)
   val fontScale = mkFloatPreference(SHARED_PREFS_FONT_SCALE, 1f)
@@ -538,7 +550,13 @@ class AppPreferences {
     private const val SHARED_PREFS_MESSAGE_TICK_SENT_COLOR = "MessageTickSentColor"
     private const val SHARED_PREFS_MESSAGE_TICK_RECEIVED_COLOR = "MessageTickReceivedColor"
     const val DEFAULT_MESSAGE_TICK_SENT_COLOR = "#ff4fc3f7"
+    private const val SHARED_PREFS_MESSAGE_TICK_DOT_SCALE = "MessageTickDotScale"
+    private const val SHARED_PREFS_MESSAGE_TICK_SENT_GLYPH = "MessageTickSentGlyph"
+    private const val SHARED_PREFS_MESSAGE_TICK_DELIVERED_GLYPH = "MessageTickDeliveredGlyph"
+    const val DEFAULT_MESSAGE_TICK_SENT_GLYPH = "tick1"
+    const val DEFAULT_MESSAGE_TICK_DELIVERED_GLYPH = "dot"
     private const val SHARED_PREFS_CHAT_LIST_NAME_COLOR = "ChatListNameColor"
+    private const val SHARED_PREFS_SHOW_PRIVATE_NOTES = "ShowPrivateNotes"
     private const val SHARED_PREFS_BUBBLE_SENT_BACKGROUND_COLOR = "BubbleSentBackgroundColor"
     private const val SHARED_PREFS_BUBBLE_SENT_TEXT_COLOR = "BubbleSentTextColor"
     private const val SHARED_PREFS_BUBBLE_SENT_BORDER_COLOR = "BubbleSentBorderColor"
@@ -560,11 +578,17 @@ class AppPreferences {
     private const val SHARED_PREFS_APP_FONT_FAMILY = "AppFontFamily"
     private const val SHARED_PREFS_RECENT_PICKED_COLORS = "RecentPickedColors"
     const val DEFAULT_SHIROIKUMA_BLACK = "#ff000000"
-    const val DEFAULT_UI_SECONDARY_COLOR = "#99ffff00"
+    // downstream (shiroikuma): the muted colour carries timestamps, delivery dots, date headers,
+    // placeholders and toolbar icons. It used to be yellow at 60% alpha, which over black reads as
+    // olive-green rather than dimmed yellow — it is pure #FFFF00 now. LEGACY_UI_SECONDARY_COLOR is
+    // the old value, rewritten once at startup so an untouched setting picks the new one up.
+    const val DEFAULT_UI_SECONDARY_COLOR = "#ffffff00"
+    const val LEGACY_UI_SECONDARY_COLOR = "#99ffff00"
     private const val SHARED_PREFS_FONT_SCALE = "FontScale"
     // device-local export/import directory for the 白い熊 Simplex UI page — never itself exported
     private const val SHARED_PREFS_UI_EXPORT_DIRECTORY = "UiExportDirectory"
     // device-local automation gate (保存復元 contract) — never exported, see ShiroikumaAutomation.kt
+    private const val SHARED_PREFS_SECONDARY_OPAQUE_APPLIED = "SecondaryOpaqueApplied"
     private const val SHARED_PREFS_AUTOMATION_ENABLED = "automation_enabled"
     private const val SHARED_PREFS_AUTOMATION_TOKEN = "automation_token"
     private const val SHARED_PREFS_DENSITY_SCALE = "DensityScale"

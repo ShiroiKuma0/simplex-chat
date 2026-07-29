@@ -206,7 +206,7 @@ private fun ShareList(
     modifier = Modifier.then(if (oneHandUI.value) Modifier.consumeWindowInsets(WindowInsets.navigationBars.only(WindowInsetsSides.Vertical)) else Modifier).imePadding(),
     contentPadding = PaddingValues(
       top = if (oneHandUI.value) WindowInsets.statusBars.asPaddingValues().calculateTopPadding() else topPaddingToContent,
-      bottom = if (oneHandUI.value) WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppBarHeight * fontSizeSqrtMultiplier else 0.dp
+      bottom = if (oneHandUI.value) WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BottomAppBarHeight * fontSizeSqrtMultiplier else 0.dp
     ),
     reverseLayout = oneHandUI.value
   ) {

@@ -117,7 +117,9 @@ private fun Modifier.userPickerBoxModifier(): Modifier {
   }
 
   val shape = RoundedCornerShape(CornerSize(cornerSize))
-  return this.clip(shape).border(1.dp, MaterialTheme.colors.background.mixWith(MaterialTheme.colors.onBackground, 1 - userPickerAlpha() - 0.02f), shape)
+  // downstream (shiroikuma): stock outlines the profile box with background mixed into
+  // onBackground — olive on the black/yellow theme; use the accent so it reads black + yellow
+  return this.clip(shape).border(1.dp, MaterialTheme.colors.primary, shape)
 }
 
 
@@ -195,7 +197,8 @@ actual fun PlatformUserPicker(modifier: Modifier, pickerState: MutableStateFlow<
     }
     NavigationBarBackground(
       modifier = Modifier.graphicsLayer { alpha = if (calculatePosition(dismissState) > 0.1f) 1f else 0f },
-      color = MaterialTheme.colors.background.mixWith(MaterialTheme.colors.onBackground, alpha = 1 - userPickerAlpha())
+      // downstream (shiroikuma): plain background, not the olive onBackground mix
+      color = MaterialTheme.colors.background
     )
   }
 }

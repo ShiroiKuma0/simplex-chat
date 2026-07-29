@@ -41,6 +41,7 @@ import chat.simplex.common.ui.theme.ThemeManager.colorFromReadableHex
 import chat.simplex.common.ui.theme.ThemeManager.toReadableHex
 import chat.simplex.common.views.chat.item.BASE_TICK_HEIGHT_DP
 import chat.simplex.common.views.chat.item.PreviewChatItemView
+import chat.simplex.common.views.chat.item.TickGlyph
 import chat.simplex.common.views.chat.item.TickIcon
 import chat.simplex.common.views.chat.item.msgTailWidthDp
 import chat.simplex.res.MR
@@ -261,13 +262,15 @@ object AppearanceScope {
         // the color rows double as a live preview of the chosen thickness and color; size is capped here so
         // the settings rows stay usable at large scales (the real chat ticks use the full scale)
         val previewScale = minOf(tickScale.value, 3f)
+        val sentGlyph = TickGlyph.from(remember { appPrefs.messageTickSentGlyph.state }.value, TickGlyph.TICK1)
+        val deliveredGlyph = TickGlyph.from(remember { appPrefs.messageTickDeliveredGlyph.state }.value, TickGlyph.DOT)
         SectionItemViewSpaceBetween({ editTickColor(received = false) }) {
           Text(stringResource(MR.strings.settings_message_ticks_sent_color))
-          TickIcon(double = false, color = sentColor, sizeDp = BASE_TICK_HEIGHT_DP * previewScale, thickness = tickThickness.value)
+          TickIcon(glyph = sentGlyph, color = sentColor, sizeDp = BASE_TICK_HEIGHT_DP * previewScale, thickness = tickThickness.value)
         }
         SectionItemViewSpaceBetween({ editTickColor(received = true) }) {
           Text(stringResource(MR.strings.settings_message_ticks_received_color))
-          TickIcon(double = true, color = rcvdColor, sizeDp = BASE_TICK_HEIGHT_DP * previewScale, thickness = tickThickness.value)
+          TickIcon(glyph = deliveredGlyph, color = rcvdColor, sizeDp = BASE_TICK_HEIGHT_DP * previewScale, thickness = tickThickness.value)
         }
       }
     }

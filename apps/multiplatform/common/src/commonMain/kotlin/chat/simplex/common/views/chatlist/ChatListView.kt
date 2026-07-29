@@ -100,23 +100,17 @@ fun ToggleChatListCard() {
       text = generalGetString(MR.strings.one_hand_ui_change_instruction),
     )
   }
-  val activeBg = MaterialTheme.colors.background.mixWith(MaterialTheme.colors.onBackground, 0.97f)
-    .copy(alpha = appPrefs.inAppBarsAlpha.get())
-  val selectedBg = MaterialTheme.colors.background.mixWith(MaterialTheme.colors.onBackground, 0.92f)
   Row(
     Modifier
       .padding(horizontal = 16.dp, vertical = 12.dp)
       .fillMaxWidth()
-      .height(IntrinsicSize.Min)
-      .clip(RoundedCornerShape(percent = 50)),
+      .height(IntrinsicSize.Min),
     horizontalArrangement = Arrangement.spacedBy(2.dp)
   ) {
     ToolbarSegment(
       icon = MR.images.ic_mobile_3,
       text = stringResource(MR.strings.one_hand_ui_bottom_bar),
       isSelected = oneHandUI.value,
-      selectedBg = selectedBg,
-      activeBg = activeBg,
       modifier = Modifier.weight(1f)
     ) { appPrefs.oneHandUI.set(true) }
     Box(Modifier.weight(1f).fillMaxHeight()) {
@@ -124,8 +118,6 @@ fun ToggleChatListCard() {
         icon = MR.images.ic_mobile_4,
         text = stringResource(MR.strings.one_hand_ui_top_bar),
         isSelected = !oneHandUI.value,
-        selectedBg = selectedBg,
-        activeBg = activeBg,
         modifier = Modifier.fillMaxSize()
       ) { appPrefs.oneHandUI.set(false) }
       Icon(
@@ -148,15 +140,19 @@ private fun ToolbarSegment(
   icon: ImageResource,
   text: String,
   isSelected: Boolean,
-  selectedBg: Color,
-  activeBg: Color,
   modifier: Modifier = Modifier,
   onClick: () -> Unit
 ) {
+  // downstream (shiroikuma): stock told the two segments apart by fill (8% vs 3% of onBackground),
+  // which is the olive tint on the black/yellow theme. Both segments stay black; the selected one
+  // is marked with a rounded accent border instead.
+  val shape = RoundedCornerShape(percent = 50)
   Row(
     modifier
       .fillMaxHeight()
-      .background(if (isSelected) selectedBg else activeBg)
+      .clip(shape)
+      .background(MaterialTheme.colors.background)
+      .then(if (isSelected) Modifier.border(1.5.dp, MaterialTheme.colors.primary, shape) else Modifier)
       .then(if (!isSelected) Modifier.clickable(onClick = onClick) else Modifier)
       .padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
     verticalAlignment = Alignment.CenterVertically
@@ -429,7 +425,7 @@ private fun AndroidOnboardingCards() {
   val oneHandUI = remember { appPrefs.oneHandUI.state }
   val topPad = topPaddingToContent(false)
   val bottomPad = if (oneHandUI.value) {
-    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppBarHeight * fontSizeSqrtMultiplier
+    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BottomAppBarHeight * fontSizeSqrtMultiplier
   } else {
     WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
   }
@@ -444,22 +440,25 @@ private fun BoxScope.NewChatSheetFloatingButton(oneHandUI: State<Boolean>, stopp
   // background with a white glyph is unreadable on the black/yellow theme); long-press opens
   // the 白い熊 Simplex UI page
   val accent = if (!stopped) MaterialTheme.colors.primary else MaterialTheme.colors.secondary
-  Box(
-    Modifier
-      .navigationBarsPadding()
-      .padding(end = DEFAULT_PADDING, bottom = DEFAULT_PADDING)
-      .align(Alignment.BottomEnd)
-      .size(AppBarHeight * fontSizeSqrtMultiplier)
-      .clip(CircleShape)
-      .background(MaterialTheme.colors.background)
-      .border(1.5.dp, accent, CircleShape)
-      .combinedClickable(
-        onClick = { if (!stopped) showNewChatSheet(oneHandUI) },
-        onLongClick = { showShiroikumaUIModal() }
-      ),
-    contentAlignment = Alignment.Center
-  ) {
-    Icon(painterResource(MR.images.ic_edit_filled), stringResource(MR.strings.add_contact_or_create_group), Modifier.size(22.dp * fontSizeSqrtMultiplier), tint = accent)
+  val alignment = Modifier.align(Alignment.BottomEnd)
+  QuickLongPress {
+    Box(
+      Modifier
+        .navigationBarsPadding()
+        .padding(end = DEFAULT_PADDING, bottom = DEFAULT_PADDING)
+        .then(alignment)
+        .size(AppBarHeight * fontSizeSqrtMultiplier)
+        .clip(CircleShape)
+        .background(MaterialTheme.colors.background)
+        .border(1.5.dp, accent, CircleShape)
+        .combinedClickable(
+          onClick = { if (!stopped) showNewChatSheet(oneHandUI) },
+          onLongClick = { showShiroikumaUIModal() }
+        ),
+      contentAlignment = Alignment.Center
+    ) {
+      Icon(painterResource(MR.images.ic_edit_filled), stringResource(MR.strings.add_contact_or_create_group), Modifier.size(22.dp * fontSizeSqrtMultiplier), tint = accent)
+    }
   }
 }
 
@@ -546,30 +545,32 @@ private fun ChatListToolbar(userPickerState: MutableStateFlow<AnimatedViewState>
 
       barButtons.add {
         // downstream (shiroikuma): black/accent instead of primary/white, long-press opens the
-        // 白い熊 Simplex UI page
-        Box(
-          Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .combinedClickable(
-              onClick = { showNewChatSheet(oneHandUI) },
-              onLongClick = { showShiroikumaUIModal() }
-            ),
-          contentAlignment = Alignment.Center
-        ) {
+        // 白い熊 Simplex UI page, scaled up with the rest of the toolbar
+        QuickLongPress {
           Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-              .background(MaterialTheme.colors.background, shape = CircleShape)
-              .border(1.5.dp, MaterialTheme.colors.primary, CircleShape)
-              .size(33.dp * fontSizeSqrtMultiplier)
+            Modifier
+              .size(48.dp * BAR_CONTENT_SCALE)
+              .clip(CircleShape)
+              .combinedClickable(
+                onClick = { showNewChatSheet(oneHandUI) },
+                onLongClick = { showShiroikumaUIModal() }
+              ),
+            contentAlignment = Alignment.Center
           ) {
-            Icon(
-              painterResource(MR.images.ic_edit_filled),
-              stringResource(MR.strings.add_contact_or_create_group),
-              Modifier.size(sp16),
-              tint = MaterialTheme.colors.primary
-            )
+            Box(
+              contentAlignment = Alignment.Center,
+              modifier = Modifier
+                .background(MaterialTheme.colors.background, shape = CircleShape)
+                .border(1.5.dp, MaterialTheme.colors.primary, CircleShape)
+                .size(33.dp * BAR_CONTENT_SCALE * fontSizeSqrtMultiplier)
+            ) {
+              Icon(
+                painterResource(MR.images.ic_edit_filled),
+                stringResource(MR.strings.add_contact_or_create_group),
+                Modifier.size(sp16 * BAR_CONTENT_SCALE),
+                tint = MaterialTheme.colors.primary
+              )
+            }
           }
         }
       }
@@ -674,23 +675,27 @@ fun SubscriptionStatusIndicator(click: (() -> Unit)) {
 @Composable
 fun UserProfileButton(image: String?, allRead: Boolean, onLongClick: (() -> Unit)? = null, onButtonClicked: () -> Unit) {
   Row(verticalAlignment = Alignment.CenterVertically) {
-    // downstream (shiroikuma): IconButton has no long-press support, so the same 48.dp round
-    // target is built from a Box with combinedClickable (long press opens the 白い熊 UI page)
-    Box(
-      Modifier
-        .size(48.dp)
-        .clip(CircleShape)
-        .combinedClickable(onClick = onButtonClicked, onLongClick = onLongClick),
-      contentAlignment = Alignment.Center
-    ) {
-      Box {
-        ProfileImage(
-          image = image,
-          size = 37.dp * fontSizeSqrtMultiplier,
-          color = MaterialTheme.colors.secondaryVariant.mixWith(MaterialTheme.colors.onBackground, 0.97f)
-        )
-        if (!allRead) {
-          unreadBadge()
+    // downstream (shiroikuma): IconButton has no long-press support, so the round target is built
+    // from a Box with combinedClickable (long press opens the 白い熊 UI page) and given the shorter
+    // long-press timeout. It only scales up while it sits in the taller bottom bar (one-hand UI).
+    val scale = if (remember { appPrefs.oneHandUI.state }.value) BAR_CONTENT_SCALE else 1f
+    QuickLongPress {
+      Box(
+        Modifier
+          .size(48.dp * scale)
+          .clip(CircleShape)
+          .combinedClickable(onClick = onButtonClicked, onLongClick = onLongClick),
+        contentAlignment = Alignment.Center
+      ) {
+        Box {
+          ProfileImage(
+            image = image,
+            size = 37.dp * scale * fontSizeSqrtMultiplier,
+            color = MaterialTheme.colors.secondaryVariant.mixWith(MaterialTheme.colors.onBackground, 0.97f)
+          )
+          if (!allRead) {
+            unreadBadge()
+          }
         }
       }
     }
@@ -902,7 +907,8 @@ fun BoxScope.NavigationBarBackground(appBarOnBottom: Boolean = false, mixedColor
   if (appPlatform.isAndroid) {
     val barPadding = WindowInsets.navigationBars.asPaddingValues()
     val paddingBottom = barPadding.calculateBottomPadding()
-    val color = if (mixedColor) MaterialTheme.colors.background.mixWith(MaterialTheme.colors.onBackground, 0.97f) else MaterialTheme.colors.background
+    // downstream (shiroikuma): no olive onBackground mix — the strip under the bars stays black
+    val color = MaterialTheme.colors.background
     val finalColor = color.copy(if (noAlpha) 1f else if (appBarOnBottom) remember { appPrefs.inAppBarsAlpha.state }.value else 0.6f)
     Box(Modifier.align(Alignment.BottomStart).height(paddingBottom).fillMaxWidth().background(finalColor))
   }
@@ -960,7 +966,7 @@ private fun BoxScope.ChatList(searchText: MutableState<TextFieldValue>, listStat
   val connectNameCandidate = remember { mutableStateOf<String?>(null) }
   val chats = filteredChats(searchShowingSimplexLink, searchChatFilteredBySimplexLink, searchText.value.text, allChats.value.toList(), activeFilter.value)
   val topPaddingToContent = topPaddingToContent(false)
-  val blankSpaceSize = if (oneHandUI.value) WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppBarHeight * fontSizeSqrtMultiplier else topPaddingToContent
+  val blankSpaceSize = if (oneHandUI.value) WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BottomAppBarHeight * fontSizeSqrtMultiplier else topPaddingToContent
   LazyColumnWithScrollBar(
     if (!oneHandUI.value) Modifier.imePadding() else Modifier,
     listState,
@@ -988,7 +994,7 @@ private fun BoxScope.ChatList(searchText: MutableState<TextFieldValue>, listStat
           .background(MaterialTheme.colors.background)
         ) {
         if (oneHandUI.value) {
-          Column(Modifier.consumeWindowInsets(WindowInsets.navigationBars).consumeWindowInsets(PaddingValues(bottom = AppBarHeight))) {
+          Column(Modifier.consumeWindowInsets(WindowInsets.navigationBars).consumeWindowInsets(PaddingValues(bottom = BottomAppBarHeight))) {
             Divider()
             // bottom toolbar: search bar below, so on desktop the connect row goes below the tags
             TagsOrConnectByName(searchText, connectNameCandidate) { candidate ->
@@ -1466,19 +1472,23 @@ fun filteredChats(
   activeFilter: ActiveFilter? = null,
 ): List<Chat> {
   val linkChatIds = searchChatFilteredBySimplexLink.value
+  // downstream (shiroikuma): "Private notes" is hidden from the list unless the 白い熊 Simplex UI
+  // switch turns it on — except when the Notes filter is explicitly selected, or it is the open chat
+  val hideNotes = !appPrefs.showPrivateNotes.get() &&
+    !(activeFilter is ActiveFilter.PresetTag && activeFilter.tag == PresetTagKind.NOTES)
   return if (linkChatIds.isNotEmpty()) {
     chats.filter { it.id in linkChatIds }
   } else {
     val s = if (searchShowingSimplexLink.value) "" else searchText.trim().lowercase()
     if (s.isEmpty())
-      chats.filter { chat -> chat.id == chatModel.chatId.value || (!chat.chatInfo.chatDeleted && !chat.chatInfo.contactCard && filtered(chat, activeFilter)) }
+      chats.filter { chat -> chat.id == chatModel.chatId.value || (!chat.chatInfo.chatDeleted && !chat.chatInfo.contactCard && !(hideNotes && chat.chatInfo is ChatInfo.Local) && filtered(chat, activeFilter)) }
     else {
       chats.filter { chat ->
         chat.id == chatModel.chatId.value ||
           when (val cInfo = chat.chatInfo) {
             is ChatInfo.Direct -> !cInfo.contact.chatDeleted && !chat.chatInfo.contactCard && cInfo.anyNameContains(s)
             is ChatInfo.Group -> cInfo.anyNameContains(s)
-            is ChatInfo.Local -> cInfo.anyNameContains(s)
+            is ChatInfo.Local -> !hideNotes && cInfo.anyNameContains(s)
             is ChatInfo.ContactRequest -> cInfo.anyNameContains(s)
             is ChatInfo.ContactConnection -> cInfo.contactConnection.localAlias.lowercase().contains(s)
             is ChatInfo.InvalidJSON -> false

@@ -143,7 +143,7 @@ actual fun ColumnWithScrollBar(
       if (oneHandUI.value) {
         Spacer(Modifier.padding(top = DEFAULT_PADDING + 5.dp).windowInsetsTopHeight(WindowInsets.statusBars))
         content()
-        Spacer(Modifier.navigationBarsPadding().padding(bottom = AppBarHeight * fontSizeSqrtMultiplier))
+        Spacer(Modifier.navigationBarsPadding().padding(bottom = BottomAppBarHeight * fontSizeSqrtMultiplier))
       } else {
         Spacer(Modifier.statusBarsPadding().padding(top = AppBarHeight * fontSizeSqrtMultiplier))
         content()

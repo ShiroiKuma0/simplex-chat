@@ -41,6 +41,9 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
 private val USER_PICKER_SECTION_SPACING = 32.dp
+// downstream (shiroikuma): rounded accent outline for the picker sheet
+private val USER_PICKER_CORNER = 18.dp
+private val USER_PICKER_BORDER = 1.5.dp
 
 // Spec: spec/client/chat-list.md#UserPicker
 @Composable
@@ -142,14 +145,19 @@ fun UserPicker(
 
   val oneHandUI = remember { appPrefs.oneHandUI.state }
   val iconColor = MaterialTheme.colors.secondaryVariant
-  val background = if (appPlatform.isAndroid) MaterialTheme.colors.background.mixWith(MaterialTheme.colors.onBackground, alpha = 1 - userPickerAlpha()) else MaterialTheme.colors.surface
+  // downstream (shiroikuma): stock tints the sheet with onBackground (0.075 of it on the BLACK
+  // theme), which turns the whole picker olive-green on the black/yellow theme — keep it pure
+  // black and mark its edge with a rounded accent border instead
+  val background = if (appPlatform.isAndroid) MaterialTheme.colors.background else MaterialTheme.colors.surface
+  val pickerShape = if (appPlatform.isAndroid) RoundedCornerShape(topStart = USER_PICKER_CORNER, topEnd = USER_PICKER_CORNER) else RectangleShape
   PlatformUserPicker(
     modifier = Modifier
       .height(IntrinsicSize.Min)
       .fillMaxWidth()
-      .then(if (newChat.isVisible()) Modifier.shadow(8.dp, clip = true, ambientColor = background) else Modifier)
+      .then(if (newChat.isVisible()) Modifier.shadow(8.dp, shape = pickerShape, clip = true, ambientColor = background) else Modifier)
       .padding(top = if (appPlatform.isDesktop && oneHandUI.value) 7.dp else 0.dp)
-      .background(background)
+      .background(background, pickerShape)
+      .then(if (appPlatform.isAndroid) Modifier.border(USER_PICKER_BORDER, MaterialTheme.colors.primary, pickerShape) else Modifier)
       .padding(bottom = USER_PICKER_SECTION_SPACING - DEFAULT_MIN_SECTION_ITEM_PADDING_VERTICAL),
     pickerState = userPickerState
   ) {
@@ -380,21 +388,23 @@ private fun GlobalSettingsSection(
   }
 
   // downstream (shiroikuma): long-pressing the settings cog opens the 白い熊 Simplex UI page directly
-  SectionItemViewLongClickable(
-    click = {
-      ModalManager.start.showModalCloseable(cardScreen = true) { close ->
-        SettingsView(chatModel, setPerformLA, close)
-      }
-    },
-    longClick = { showShiroikumaUIModal() },
-    padding = if (appPlatform.isDesktop) PaddingValues(start = DEFAULT_PADDING * 1.7f, end = DEFAULT_PADDING + 2.dp) else PaddingValues(start = DEFAULT_PADDING, end = DEFAULT_PADDING_HALF)
-  ) {
-    val text = generalGetString(MR.strings.settings_section_title_settings).lowercase().capitalize(Locale.current)
-    Icon(painterResource(MR.images.ic_settings), text, tint = MaterialTheme.colors.secondary)
-    TextIconSpaced()
-    Text(text, color = Color.Unspecified)
-    Spacer(Modifier.weight(1f))
-    ColorModeSwitcher()
+  QuickLongPress {
+    SectionItemViewLongClickable(
+      click = {
+        ModalManager.start.showModalCloseable(cardScreen = true) { close ->
+          SettingsView(chatModel, setPerformLA, close)
+        }
+      },
+      longClick = { showShiroikumaUIModal() },
+      padding = if (appPlatform.isDesktop) PaddingValues(start = DEFAULT_PADDING * 1.7f, end = DEFAULT_PADDING + 2.dp) else PaddingValues(start = DEFAULT_PADDING, end = DEFAULT_PADDING_HALF)
+    ) {
+      val text = generalGetString(MR.strings.settings_section_title_settings).lowercase().capitalize(Locale.current)
+      Icon(painterResource(MR.images.ic_settings), text, tint = MaterialTheme.colors.secondary)
+      TextIconSpaced()
+      Text(text, color = Color.Unspecified)
+      Spacer(Modifier.weight(1f))
+      ColorModeSwitcher()
+    }
   }
 }
 
