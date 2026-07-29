@@ -273,7 +273,7 @@ private fun ModalData.NewChatSheetLayout(
 
   @Composable
   fun OneHandLazyColumn() {
-    val blankSpaceSize = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppBarHeight * fontSizeSqrtMultiplier
+    val blankSpaceSize = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BottomAppBarHeight * fontSizeSqrtMultiplier
     LazyColumnWithScrollBar(
       state = listState,
       reverseLayout = oneHandUI.value
@@ -308,7 +308,7 @@ private fun ModalData.NewChatSheetLayout(
             )
         ) {
           Divider()
-          Column(Modifier.consumeWindowInsets(WindowInsets.navigationBars).consumeWindowInsets(PaddingValues(bottom = AppBarHeight * fontSizeSqrtMultiplier))) {
+          Column(Modifier.consumeWindowInsets(WindowInsets.navigationBars).consumeWindowInsets(PaddingValues(bottom = BottomAppBarHeight * fontSizeSqrtMultiplier))) {
             ContactsSearchBar(
               listState = listState,
               searchText = searchText,
@@ -693,7 +693,7 @@ private fun ModalData.DeletedContactsView(rh: RemoteHostInfo?, closeDeletedChats
         if (!oneHandUI.value) Modifier.imePadding() else Modifier,
         contentPadding = PaddingValues(
           top = if (!oneHandUI.value) topPaddingToContent else 0.dp,
-          bottom = if (oneHandUI.value) WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppBarHeight * fontSizeSqrtMultiplier else 0.dp
+          bottom = if (oneHandUI.value) WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BottomAppBarHeight * fontSizeSqrtMultiplier else 0.dp
         ),
         reverseLayout = oneHandUI.value,
       ) {
@@ -721,7 +721,7 @@ private fun ModalData.DeletedContactsView(rh: RemoteHostInfo?, closeDeletedChats
               close = close,
             )
           } else {
-            Column(Modifier.consumeWindowInsets(WindowInsets.navigationBars).consumeWindowInsets(PaddingValues(bottom = AppBarHeight))) {
+            Column(Modifier.consumeWindowInsets(WindowInsets.navigationBars).consumeWindowInsets(PaddingValues(bottom = BottomAppBarHeight))) {
               ContactsSearchBar(
                 listState = listState,
                 searchText = searchText,

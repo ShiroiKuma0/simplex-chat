@@ -168,6 +168,7 @@ private fun UiEximCategory.specs(): List<PrefSpec> = when (this) {
   UiEximCategory.CHAT_LIST -> listOf(
     PrefSpec.Str("chatListNameColor", appPrefs.chatListNameColor),
     PrefSpec.Flt("profileImageCornerRadius", appPrefs.profileImageCornerRadius),
+    PrefSpec.Bool("showPrivateNotes", appPrefs.showPrivateNotes),
   )
   UiEximCategory.CHAT_BUBBLES -> listOf(
     PrefSpec.Str("bubbleReceivedBackgroundColor", appPrefs.bubbleReceivedBackgroundColor),
@@ -192,6 +193,9 @@ private fun UiEximCategory.specs(): List<PrefSpec> = when (this) {
     PrefSpec.Flt("messageTickThickness", appPrefs.messageTickThickness),
     PrefSpec.Str("messageTickSentColor", appPrefs.messageTickSentColor),
     PrefSpec.Str("messageTickReceivedColor", appPrefs.messageTickReceivedColor),
+    PrefSpec.Flt("messageTickDotScale", appPrefs.messageTickDotScale),
+    PrefSpec.Str("messageTickSentGlyph", appPrefs.messageTickSentGlyph),
+    PrefSpec.Str("messageTickDeliveredGlyph", appPrefs.messageTickDeliveredGlyph),
   )
 }
 

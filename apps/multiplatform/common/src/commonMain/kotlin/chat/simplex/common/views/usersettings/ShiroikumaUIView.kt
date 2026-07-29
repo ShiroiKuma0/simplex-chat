@@ -29,6 +29,7 @@ import chat.simplex.common.ui.theme.*
 import chat.simplex.common.ui.theme.ThemeManager.colorFromReadableHex
 import chat.simplex.common.ui.theme.ThemeManager.toReadableHex
 import chat.simplex.common.views.chat.item.BASE_TICK_HEIGHT_DP
+import chat.simplex.common.views.chat.item.TickGlyph
 import chat.simplex.common.views.chat.item.TickIcon
 import chat.simplex.common.views.helpers.*
 import dev.icerock.moko.resources.compose.painterResource
@@ -82,6 +83,7 @@ fun ShiroikumaUIView() {
     // ── Chat list ──────────────────────────────────────────────
     UIHeading("Chat list")
     UIColorRow(1, "Contact name", appPrefs.chatListNameColor, AppPreferences.DEFAULT_SHIROIKUMA_YELLOW)
+    UISwitchRow(1, "Show Private notes", appPrefs.showPrivateNotes)
     UIFloatSliderRow(1, "Avatar corner radius", appPrefs.profileImageCornerRadius, 0f..50f) { "${it.roundToInt()}" }
     ChatListPreviewRow(1)
 
@@ -116,9 +118,11 @@ fun ShiroikumaUIView() {
     UIHeading("Delivery ticks")
     UIFloatSliderRow(1, "Size", appPrefs.messageTickScale, 1f..15f) { "×${"%.1f".format(it)}" }
     UIFloatSliderRow(1, "Thickness", appPrefs.messageTickThickness, 0f..4f) { "%.1f".format(it) }
-    UIColorRow(1, "Sent tick", appPrefs.messageTickSentColor, AppPreferences.DEFAULT_MESSAGE_TICK_SENT_COLOR)
-    UIColorRow(1, "Received tick", appPrefs.messageTickReceivedColor, AppPreferences.DEFAULT_SHIROIKUMA_YELLOW)
-    TicksPreviewRow(1)
+    UIFloatSliderRow(1, "Dot size multiplier", appPrefs.messageTickDotScale, 1f..5f, steps = 39) { "×${"%.1f".format(it)}" }
+    UIColorRow(1, "Sent tick's color", appPrefs.messageTickSentColor, AppPreferences.DEFAULT_MESSAGE_TICK_SENT_COLOR)
+    TickGlyphRow(1, "Sent glyph", appPrefs.messageTickSentGlyph, TickGlyph.TICK1, appPrefs.messageTickSentColor, AppPreferences.DEFAULT_MESSAGE_TICK_SENT_COLOR)
+    UIColorRow(1, "Delivered tick's color", appPrefs.messageTickReceivedColor, AppPreferences.DEFAULT_SHIROIKUMA_YELLOW)
+    TickGlyphRow(1, "Delivered glyph", appPrefs.messageTickDeliveredGlyph, TickGlyph.DOT, appPrefs.messageTickReceivedColor, AppPreferences.DEFAULT_SHIROIKUMA_YELLOW)
 
     SectionBottomSpacer()
   }
@@ -284,7 +288,7 @@ private fun UIColorRow(level: Int, label: String, pref: SharedPreference<String?
 }
 
 @Composable
-private fun UIFloatSliderRow(level: Int, label: String, pref: SharedPreference<Float>, range: ClosedFloatingPointRange<Float>, format: (Float) -> String) {
+private fun UIFloatSliderRow(level: Int, label: String, pref: SharedPreference<Float>, range: ClosedFloatingPointRange<Float>, steps: Int = 0, format: (Float) -> String) {
   val value = remember { pref.state }.value
   UIRow(level) {
     Text(label, Modifier.weight(0.5f), fontSize = 15.sp)
@@ -292,7 +296,9 @@ private fun UIFloatSliderRow(level: Int, label: String, pref: SharedPreference<F
       value.coerceIn(range),
       onValueChange = { pref.set(it) },
       Modifier.weight(0.5f).padding(horizontal = 6.dp),
-      valueRange = range
+      valueRange = range,
+      steps = steps,
+      colors = SliderDefaults.colors(activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent)
     )
     Text(format(value), Modifier.widthIn(min = 48.dp), fontSize = 13.sp, textAlign = TextAlign.End)
   }
@@ -628,17 +634,63 @@ private fun CallIconPreviewRow(level: Int) {
   }
 }
 
+// the configured tick size, capped so a ×15 tick doesn't blow the settings rows apart
 @Composable
-private fun TicksPreviewRow(level: Int) {
-  val scale = remember { appPrefs.messageTickScale.state }.value
+private fun tickPreviewSizeDp(): Float =
+  BASE_TICK_HEIGHT_DP * min(remember { appPrefs.messageTickScale.state }.value, 3f)
+
+// downstream (shiroikuma): glyph row + picker, ported from the ArcaneChat fork. The row shows the
+// state's current glyph, and the picker previews every option at the configured size, colour and
+// thickness — rendered by the same TickIcon the chat footer uses, so the choice is made on the
+// picture and a preview can never drift from the real thing.
+@Composable
+private fun TickGlyphRow(
+  level: Int,
+  label: String,
+  pref: SharedPreference<String?>,
+  default: TickGlyph,
+  colorPref: SharedPreference<String?>,
+  defaultColor: String,
+) {
+  val glyph = TickGlyph.from(remember { pref.state }.value, default)
+  val color = prefColor(colorPref, defaultColor)
   val thickness = remember { appPrefs.messageTickThickness.state }.value
-  val sentColor = prefColor(appPrefs.messageTickSentColor, AppPreferences.DEFAULT_MESSAGE_TICK_SENT_COLOR)
-  val rcvdColor = prefColor(appPrefs.messageTickReceivedColor, AppPreferences.DEFAULT_SHIROIKUMA_YELLOW)
-  val previewScale = min(scale, 3f)
-  UIRow(level) {
-    Text("Preview", Modifier.weight(1f), fontSize = 15.sp)
-    TickIcon(double = false, color = sentColor, sizeDp = BASE_TICK_HEIGHT_DP * previewScale, thickness = thickness)
-    Spacer(Modifier.width(10.dp))
-    TickIcon(double = true, color = rcvdColor, sizeDp = BASE_TICK_HEIGHT_DP * previewScale, thickness = thickness)
+  val sizeDp = tickPreviewSizeDp()
+  UIRow(level, click = { showTickGlyphPicker(label, pref, default, color, sizeDp, thickness) }) {
+    Text(label, Modifier.weight(1f), fontSize = 15.sp)
+    Text(glyph.label, fontSize = 13.sp, color = MaterialTheme.colors.secondary)
+    Spacer(Modifier.width(12.dp))
+    Box(Modifier.widthIn(min = 24.dp), contentAlignment = Alignment.CenterEnd) {
+      TickIcon(glyph = glyph, color = color, sizeDp = sizeDp, thickness = thickness)
+    }
+  }
+}
+
+private fun showTickGlyphPicker(
+  title: String,
+  pref: SharedPreference<String?>,
+  default: TickGlyph,
+  color: Color,
+  sizeDp: Float,
+  thickness: Float,
+) {
+  ModalManager.start.showModal {
+    ColumnWithScrollBar {
+      AppBarTitle(title)
+      val current = TickGlyph.from(remember { pref.state }.value, default)
+      TickGlyph.values().forEach { g ->
+        UIRow(0, click = { pref.set(g.key); ModalManager.start.closeModal() }) {
+          if (g == current) {
+            Icon(painterResource(MR.images.ic_done_filled), null, Modifier.size(18.dp), tint = MaterialTheme.colors.primary)
+            Spacer(Modifier.width(6.dp))
+          } else {
+            Spacer(Modifier.width(24.dp))
+          }
+          Text(g.label, Modifier.weight(1f), fontSize = 15.sp)
+          TickIcon(glyph = g, color = color, sizeDp = sizeDp, thickness = thickness)
+        }
+      }
+      SectionBottomSpacer()
+    }
   }
 }

@@ -152,7 +152,7 @@ fun UserProfileLayout(
               )
             }
             if (oneHandUI.value) {
-              Spacer(Modifier.navigationBarsPadding().padding(bottom = AppBarHeight * fontSizeSqrtMultiplier))
+              Spacer(Modifier.navigationBarsPadding().padding(bottom = BottomAppBarHeight * fontSizeSqrtMultiplier))
             } else {
               Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.systemBars))
             }

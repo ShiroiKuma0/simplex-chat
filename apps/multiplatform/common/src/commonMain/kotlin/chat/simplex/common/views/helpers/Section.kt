@@ -43,8 +43,10 @@ private fun CardColumnLayout(
   cardShape: Shape = SectionCardShape,
   content: @Composable () -> Unit
 ) {
-  val dividerColor = canvasColorForCurrentTheme()
-  val dividerPx = with(LocalDensity.current) { 2.dp.toPx() }
+  // downstream (shiroikuma): black card, rounded accent outline, faint accent row dividers (the
+  // stock divider matched the canvas, which is invisible now that the card is the canvas colour)
+  val dividerColor = sectionCardDividerColor()
+  val dividerPx = with(LocalDensity.current) { 1.dp.toPx() }
   val childBottoms = remember { mutableListOf<Float>() }
   Layout(
     content = content,
@@ -53,6 +55,7 @@ private fun CardColumnLayout(
       .fillMaxWidth()
       .clip(cardShape)
       .background(sectionCardColor())
+      .border(1.5.dp, sectionCardBorderColor(), cardShape)
       .padding(contentPadding)
       .drawBehind {
         for (i in 0 until childBottoms.size - 1) {

@@ -76,7 +76,7 @@ fun TagListView(rhId: Long?, chat: Chat? = null, close: () -> Unit, reorderMode:
     state = listState,
     contentPadding = PaddingValues(
       top = if (oneHandUI.value) WindowInsets.statusBars.asPaddingValues().calculateTopPadding() else topPaddingToContent,
-      bottom = if (oneHandUI.value) WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppBarHeight * fontSizeSqrtMultiplier else 0.dp
+      bottom = if (oneHandUI.value) WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BottomAppBarHeight * fontSizeSqrtMultiplier else 0.dp
     ),
     verticalArrangement = if (oneHandUI.value) Arrangement.Bottom else Arrangement.Top,
   ) {

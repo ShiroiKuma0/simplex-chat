@@ -60,7 +60,7 @@ private fun EmojiPicker(close: (String?) -> Unit) {
       start = DEFAULT_PADDING_HALF,
       end = DEFAULT_PADDING_HALF,
       top = if (oneHandUI.value) WindowInsets.statusBars.asPaddingValues().calculateTopPadding() else topPaddingToContent,
-      bottom = if (oneHandUI.value) WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + AppBarHeight * fontSizeSqrtMultiplier else 0.dp
+      bottom = if (oneHandUI.value) WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + BottomAppBarHeight * fontSizeSqrtMultiplier else 0.dp
     ),
   ) {
     AndroidView(
