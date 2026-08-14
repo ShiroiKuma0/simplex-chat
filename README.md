@@ -10,7 +10,7 @@ A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **ma
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.0+2`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.1-beta.0+1`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -68,7 +68,7 @@ The launcher icon is restyled into the fork's black/yellow scheme — the Simple
 
 ## 📦 Tracks upstream fast, ships lean
 
-The fork rebases onto every new upstream release — **betas included** — usually days after it ships, and this build sits on upstream **7.0** the day it landed. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.0+2`), with version codes that always sort above the corresponding upstream build.
+The fork rebases onto every new upstream release — **betas included** — usually days after it ships, and this build sits on upstream **7.1-beta.0** the day it landed. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.1-beta.0+1`), with version codes that always sort above the corresponding upstream build. Since upstream split Android into `google` (Play Billing) and `foss` variants in 7.1, this is a **`foss`** build — no Play dependencies.
 
 ---
 
@@ -93,6 +93,6 @@ cp /tmp/sx-libs/lib/arm64-v8a/libsimplex.so /tmp/sx-libs/lib/arm64-v8a/libsuppor
 # Build (JDK 21, Android SDK platform 35):
 printf 'abi_filter=arm64-v8a\ncompression.level=9\nenable_debuggable=false\n' \
   > apps/multiplatform/local.properties
-(cd apps/multiplatform && ./gradlew :android:assembleRelease)
+(cd apps/multiplatform && ./gradlew :android:assembleFossRelease)
 # then zipalign + apksigner with your own keystore
 ```
