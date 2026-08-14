@@ -1,3 +1,92 @@
+# Changelog
+
+This file carries **both histories**: the 白い熊 SimpleX fork's releases first, then the upstream
+SimpleX Chat release history unchanged below.
+
+---
+
+# 白い熊 SimpleX — fork releases
+
+## 白い熊 SimpleX 7.1-beta.0+1 — 2026-08-14
+
+Built on upstream **v7.1.0-beta.0**.
+
+**Packaging**
+- Upstream split the Android app into `google` (Play Billing, bundle-only) and `foss` (APK, default) product flavors in 7.1, and added a task-graph guard that rejects a release APK containing Play Billing. This build is the **`foss`** variant — no Play dependencies — assembled via `:android:assembleFossRelease`; the build tooling and the README build instructions were updated to match.
+
+**Rebase**
+- All 25 downstream commits replayed onto `v7.1.0-beta.0`. The IME-commit-race fix is **still required**: upstream did not touch `PlatformTextField.android.kt` between 7.0.0 and 7.1.0-beta.0, and the stale-snapshot `setText` that wipes IME commits is present verbatim.
+
+## 白い熊 SimpleX 7.0+2 — 2026-07-29
+
+Built on upstream **v7.0.0**.
+
+**保存復元 headless export**
+- The automation contract now *states which categories should start ticked*, so a caller no longer has to guess a sensible default selection.
+- A running export can be **cancelled from outside**. The archive is written under a temporary name and only claims its real filename once complete, so a cancelled run leaves the backup directory exactly as it found it — never a half-written file that looks finished.
+- The cancel check runs between the copy buffers of the chat-database stream, not merely between categories, so aborting a multi-gigabyte export takes effect in milliseconds instead of playing out to the end.
+
+## 白い熊 SimpleX 7.0-beta.6+12 — 2026-07-29
+
+Built on upstream **v7.0.0-beta.6**.
+
+**UI**
+- Untinted surfaces: stock lifts "raised" dark surfaces by mixing text color into the background, which on a black/yellow theme comes out olive-green. Every surface is now pure black, separated by a rounded yellow border instead — profile sheet, settings cards, app bars, one-hand chooser.
+- The muted color carrying timestamps, delivery dots, date headers and toolbar icons changed from translucent yellow (`#99ffff00`, effectively `#999900` over black) to opaque `#FFFF00`.
+- The **bottom** bar is 50% taller than stock — and only the bottom one — with its avatar and new-chat button scaled to match, for one-handed use on a foldable.
+- Long-press shortcuts into the UI page fire at 250 ms instead of the platform default, without making message menus trigger accidentally.
+- **Private notes** is hidden from the chat list unless explicitly switched on.
+- **Delivery tick glyphs**: each indicator's *shape* is now selectable — single, double or triple tick, dot, tick in a circle, up arrow, clock, exclamation mark, or hidden. The picker previews every option at the configured size, color and thickness, drawn by the same code the chat footer uses. Delivered defaults to a **dot** rather than a second tick, with a dot-size multiplier (1–5 in tenths).
+
+## 白い熊 SimpleX 7.0-beta.6+3 — 2026-07-25
+
+Built on upstream **v7.0.0-beta.6**.
+
+**保存復元 headless state export (automation contract)**
+- The full UI export now runs **headlessly** on a token-gated broadcast, so an automation task can back the app up without touching the phone. The token lives on the UI page, is copied with a tap, and is regenerable; the feature is off by default and nothing responds until the switch is on.
+- The app writes exactly one ZIP wherever the caller names, reports progress in real counts (`区分 3/8 — Chat bubbles`, or `512 MB / 4.2 GB` while streaming the chat database), and replies with the written path and its exact size.
+- Categories are selectable by id, down to sub-options such as the font files alone.
+- Replies are always sent as a fresh broadcast with `FLAG_INCLUDE_STOPPED_PACKAGES`, because EMUI drops Binders and severs the ordered-result channel.
+- `MANAGE_EXTERNAL_STORAGE` is declared so the contract's absolute `path` extra works.
+- Export filenames moved to the family convention `shiroikuma-simplex_<timestamp>.zip`; the previous `shiroikuma-simplex-ui_` prefix is still recognised on import.
+
+## 白い熊 SimpleX 7.0-beta.5+3 — 2026-07-24
+
+Built on upstream **v7.0.0-beta.5**.
+
+**Export / Import**
+- **Accounts** became an export/import category: the archive embeds the full SimpleX chat-database archive — all profiles, contacts and messages — making one export a complete portable backup. Importing it replaces the database after an explicit confirmation.
+
+## 白い熊 SimpleX 7.0-beta.5+2 — 2026-07-24
+
+Built on upstream **v7.0.0-beta.5**.
+
+**The 白い熊 Simplex UI page**
+- A single settings page — first item in Settings, also reachable by long-pressing the cog, the avatar, the chat menu or the new-chat button — collecting every appearance control in one place: global background/text/accent/secondary colors applied after theme resolution, an external `.ttf`/`.otf` font replacing Inter app-wide with a size slider, chat-list name color and avatar roundness, per-direction bubble background/text/border colors with border width, corner roundness, tail toggle and sender-row sizing, date-header styling, and call-icon scale. Every control has a live preview; colors are picked in an RGBA slider editor with one-tap recent-color presets.
+- Styled kxkb-fashion: bold yellow headings underlined exactly as wide as their text, sections split by hairline rules.
+
+**Export / Import**
+- Pick an export directory once and the page shows your latest export whenever it opens. Export writes a ZIP (manifest + one JSON per category + your font files) one-tap into that directory; import restores any selection of categories — App colors, Font, Chat list, Chat bubbles, Chat view, Delivery ticks — from any exported archive, with a restart-now option to apply everything.
+
+## 白い熊 SimpleX 7.0-beta.2+1 — 2026-07-03
+
+Built on upstream **v7.0.0-beta.2**. First published fork release.
+
+**The reason the fork exists — dictionary keyboards actually work**
+- Stock SimpleX for Android has a Compose snapshot race in its message field: when an IME *commits* text — tapping a suggestion, autocorrect-on-space, selecting a CJK candidate — the app's state sync fires with a value captured before the commit, decides the `EditText` has diverged, and calls `setText` with the stale text, **wiping the keyboard's commit**. Dictionary-based keyboards (Multiling O and friends) constantly lose words as a result.
+- The fix re-reads the fresh compose state *inside* the `AndroidView` update lambda, so the divergence check sees what the IME just wrote; adds a composing-region guard so an active multi-step composition is never destroyed by `setText`; and declares `TYPE_TEXT_FLAG_AUTO_CORRECT` on the input type. Android analogue of upstream's iOS-only fix in PR #4045 — the bug is still present upstream.
+
+**Delivery ticks**
+- Sent/delivered indicators are scalable from 1× to 15×, with configurable stroke thickness and an individual color each. They are redrawn as true vector strokes on a Canvas, so they stay crisp at any size instead of plateauing at the stock icon's intrinsic resolution.
+
+**Identity & packaging**
+- `applicationId` `shiroikuma.simplex` and a matching FileProvider authority, so the fork installs **side-by-side** with official SimpleX Chat from F-Droid. The Kotlin/Java namespace stays `chat.simplex.app`.
+- App name `白い熊 SimpleX`; launcher icon restyled into the fork's black/yellow scheme — the SimpleX hashmark traced in yellow on black, faithful to upstream's geometry.
+- APKs are `arm64-v8a` only, versioned `<upstream>+<build>` with version codes (`upstream code × 10000 + build`) that always sort above the corresponding upstream build.
+- Issue templates de-branded to point at this fork rather than upstream.
+
+---
+
 # Release History
 
 ## v6.5
