@@ -253,7 +253,7 @@ export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 export PATH="$JAVA_HOME/bin:$PATH"
 export ANDROID_HOME="$HOME/android-sdk"        # local.properties has no sdk.dir; non-interactive shells don't inherit it
 export ANDROID_SDK_ROOT="$HOME/android-sdk"
-# Bump the Gradle daemon heap BEFORE the first ./gradlew call: assembleRelease OOMs at
+# Bump the Gradle daemon heap BEFORE the first ./gradlew call: the release assemble OOMs at
 # the committed -Xmx2048m while deflating the ~192MB libsimplex.so at compression.level=9
 # (java.lang.OutOfMemoryError in zipflinger Compressor.deflate). Editing it pre-daemon
 # means the daemon born at `./gradlew clean` already carries 6g; the host has ~93GiB RAM.
@@ -288,7 +288,7 @@ EOF
 rm -rf apps/multiplatform/android/build apps/multiplatform/common/build apps/multiplatform/android/.cxx
 ```
 
-The clean + `rm -rf` is essential — stale `.cxx` state from prior builds (especially with armeabi-v7a artifacts) causes `IncrementalSplitterRunnable` failures in `packageRelease`.
+The clean + `rm -rf` is essential — stale `.cxx` state from prior builds (especially with armeabi-v7a artifacts) causes `IncrementalSplitterRunnable` failures in `packageFossRelease` (pre-7.1: `packageRelease`).
 
 **Set the custom build version** (per "Versioning"). Compute the bump and inject into `gradle.properties` — reverted right after the build, never committed:
 
@@ -314,11 +314,12 @@ sed -i "s/^android.version_code=.*/android.version_code=${custom_vcode}/" apps/m
 **Build, sign, verify:**
 
 ```bash
-(cd apps/multiplatform && ./gradlew --stacktrace :android:assembleRelease)
+# NOT :android:assembleRelease -- see "Product flavors" below. `foss` is our variant.
+(cd apps/multiplatform && ./gradlew --stacktrace :android:assembleFossRelease)
 git checkout apps/multiplatform/gradle.properties   # revert the injected version + heap bump (keep them out of git)
-grep -E '"versionCode"|"versionName"' apps/multiplatform/android/build/outputs/apk/release/output-metadata.json  # sanity-check the baked version
+grep -E '"versionCode"|"versionName"' apps/multiplatform/android/build/outputs/apk/foss/release/output-metadata.json  # sanity-check the baked version
 
-unsigned_apk="apps/multiplatform/android/build/outputs/apk/release/android-arm64-v8a-release-unsigned.apk"
+unsigned_apk="apps/multiplatform/android/build/outputs/apk/foss/release/android-foss-arm64-v8a-release-unsigned.apk"
 zipalign -p -f 4 "$unsigned_apk" /tmp/sx-aligned.apk
 apksigner sign \
   --ks ~/.android-keystores/simplex-custom.jks \
@@ -365,11 +366,31 @@ java -version
 
 This matters specifically because the user has multiple JDKs installed (Tuxedo OS defaults to JDK 21 system-wide, but their other build project — the Flutter-based 白い熊の辞書 fork — pins Gradle 7.2 + Zulu 11 at `/usr/lib/jvm/zulu11`). Shell sessions cross-pollinate `JAVA_HOME` and daemons; without the prelude, building SimpleX shortly after that project can silently reuse a Zulu 11 daemon and fail with AGP class-version mismatches.
 
-### Gradle heap: assembleRelease OOMs at the committed `-Xmx2048m`
+### Product flavors: build `assembleFossRelease`, never `assembleRelease` (since v7.1.0-beta.0)
 
-`apps/multiplatform/gradle.properties` commits `org.gradle.jvmargs=-Xmx2048m`. That is not enough to package a release. `local.properties` sets `compression.level=9`, and zipflinger builds the whole deflated entry in memory — for the ~192MB `libsimplex.so` (the lifted Haskell core) at max compression it throws `java.lang.OutOfMemoryError: Java heap space` in `Compressor.deflate` during `:android:assembleRelease`. A warm daemon inherited from another project with a bigger heap can mask it, so it surfaces intermittently (it bit the 6.5.4+2 build on a cold daemon).
+Upstream `0a61b0dde` ("android: add google and foss build flavors", #7328), first shipped in **`v7.1.0-beta.0`**, added a `store` flavor dimension to `apps/multiplatform/android/build.gradle.kts`:
 
-The prelude bumps the heap to `-Xmx6g` **before** the first `./gradlew` call, so the daemon is born with the larger heap. Bumping it *after* `./gradlew clean` doesn't help — the already-started 2g daemon is reused for `assembleRelease` and still OOMs unless you `pkill` and respawn. The host has ~93GiB RAM, so 6g is comfortable. The edit lives in the same `gradle.properties` as the injected build version, so the post-build `git checkout apps/multiplatform/gradle.properties` reverts both — it never lands in git.
+- **`google`** — distributed via Google Play as an app **bundle**, includes Play Billing (`com.android.billingclient`), `BuildConfig.PLAY_STORE = true`.
+- **`foss`** — F-Droid and GitHub **APKs**, no Play dependencies, `PLAY_STORE = false`, `isDefault = true`.
+
+Alongside it upstream added a `gradle.taskGraph.whenReady` guard that **throws `GradleException` if `packageGoogleRelease` is in the graph** ("A release apk must not include Play Billing, use assembleFossRelease or bundleGoogleRelease"). Every aggregate task — `assemble`, `assembleRelease`, `build` — pulls in *all* flavors, so **`:android:assembleRelease` now hard-fails**. It is not a "try it and see" situation; the guard is unconditional.
+
+Our fork ships an APK, so **`foss` is the correct and only variant**:
+
+| | Before v7.1.0-beta.0 | From v7.1.0-beta.0 |
+|---|---|---|
+| Gradle task | `:android:assembleRelease` | `:android:assembleFossRelease` |
+| Unsigned APK | `…/build/outputs/apk/release/android-arm64-v8a-release-unsigned.apk` | `…/build/outputs/apk/**foss**/release/android-**foss**-arm64-v8a-release-unsigned.apk` |
+| Metadata JSON | `…/build/outputs/apk/release/output-metadata.json` | `…/build/outputs/apk/**foss**/release/output-metadata.json` |
+| Package task (heap/OOM notes) | `packageRelease` | `packageFossRelease` |
+
+Nothing else changes: the four identity edits sit clear of the flavor block (upstream inserted it between `defaultConfig` and `buildTypes`) and merged without conflict on the 7.1.0-beta.0 rebase. `:android:compressApk` still runs as a `finalizedBy` and still prints "No signing configs for this build type: release" — harmless, we sign by hand afterwards.
+
+### Gradle heap: assembleFossRelease OOMs at the committed `-Xmx2048m`
+
+`apps/multiplatform/gradle.properties` commits `org.gradle.jvmargs=-Xmx2048m`. That is not enough to package a release. `local.properties` sets `compression.level=9`, and zipflinger builds the whole deflated entry in memory — for the ~192MB `libsimplex.so` (the lifted Haskell core) at max compression it throws `java.lang.OutOfMemoryError: Java heap space` in `Compressor.deflate` during `:android:assembleFossRelease` (pre-7.1: `:android:assembleRelease`). A warm daemon inherited from another project with a bigger heap can mask it, so it surfaces intermittently (it bit the 6.5.4+2 build on a cold daemon).
+
+The prelude bumps the heap to `-Xmx6g` **before** the first `./gradlew` call, so the daemon is born with the larger heap. Bumping it *after* `./gradlew clean` doesn't help — the already-started 2g daemon is reused for the release assemble and still OOMs unless you `pkill` and respawn. The host has ~93GiB RAM, so 6g is comfortable. The edit lives in the same `gradle.properties` as the injected build version, so the post-build `git checkout apps/multiplatform/gradle.properties` reverts both — it never lands in git.
 
 ## Deploy: copy to `~/tmp/`, then `/after-build`
 
