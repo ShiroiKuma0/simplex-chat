@@ -65,6 +65,7 @@ fun ShiroikumaUIView() {
     UIHeading("Export / Import", first = true)
     ExportImportRow(1)
     AutomationSwitchRow(1)
+    AutomationRequireTokenRow(1)
     AutomationTokenRow(1)
 
     // ── App colors ─────────────────────────────────────────────
@@ -184,7 +185,13 @@ private fun ExportImportRow(level: Int) {
 
 // downstream (shiroikuma): the 保存復元 automation rows — deliberately part of the
 // Export/Import section rather than a section of their own, so every sister app puts backup
-// automation in the same place. Default OFF; nothing is reachable until the switch is on.
+// automation in the same place.
+//
+// Contract v2: the switch ships ON and the token is opt-in. The point is a phone that has just
+// been wiped, where nothing has been configured and nobody has pasted anything — a gate that only
+// opens once the phone is already set up is no gate for setting the phone up. The switch stays a
+// switch rather than being removed because it is the only way to close this app off, and a
+// feature that can be turned on but never off is one 白い熊 cannot retreat from.
 @Composable
 private fun AutomationSwitchRow(level: Int) {
   val enabled = remember { appPrefs.automationEnabled.state }.value
@@ -194,7 +201,7 @@ private fun AutomationSwitchRow(level: Int) {
         Text("Automation export", fontSize = 15.sp)
         Spacer(Modifier.height(1.dp))
         Text(
-          "Sister-app tasks (保存復元) may trigger this app's export with the token below.",
+          "Sister apps may trigger this app's export (保存復元), and back its data up and restore it (応用管理).",
           fontSize = 13.sp,
           color = MaterialTheme.colors.secondary
         )
@@ -216,8 +223,42 @@ private fun AutomationSwitchRow(level: Int) {
   }
 }
 
+/**
+ * Row 2 — 「Use authorization token?」, default OFF.
+ *
+ * Off means any sister app may drive the automation; on means a caller must also present the
+ * token below. The data door checks the caller's package, uid and signing certificate either way,
+ * which is a stronger question than a shared secret and is not affected by this switch.
+ */
+@Composable
+private fun AutomationRequireTokenRow(level: Int) {
+  val enabled = remember { appPrefs.automationEnabled.state }.value
+  val require = remember { appPrefs.automationRequireToken.state }.value
+  if (!enabled) return
+  UIRow(level, click = { appPrefs.automationRequireToken.set(!require) }) {
+    Column(Modifier.weight(1f).padding(vertical = 4.dp)) {
+      Text("Use authorization token?", fontSize = 15.sp)
+      Spacer(Modifier.height(1.dp))
+      Text(
+        "Off: any sister app may drive the automation. On: a caller must also present the token below. " +
+          "The data door checks the caller's identity and signature either way.",
+        fontSize = 13.sp,
+        color = MaterialTheme.colors.secondary
+      )
+    }
+    Switch(checked = require, onCheckedChange = { appPrefs.automationRequireToken.set(it) })
+  }
+}
+
+/**
+ * Row 3 — the token itself, shown ONLY while row 2 is on. A 48-character secret sitting under an
+ * off switch invites 白い熊 to paste it somewhere it will do nothing.
+ */
 @Composable
 private fun AutomationTokenRow(level: Int) {
+  val enabled = remember { appPrefs.automationEnabled.state }.value
+  val require = remember { appPrefs.automationRequireToken.state }.value
+  if (!enabled || !require) return
   val clipboard = LocalClipboardManager.current
   // read (and thus lazily generate) the token so the row always shows a value
   val token = remember { mutableStateOf(AutomationAuth.token()) }

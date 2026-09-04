@@ -25,6 +25,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.io.OutputStream
 import java.net.URI
 import java.text.SimpleDateFormat
@@ -339,12 +340,11 @@ private class UiImportData(val entries: Map<String, ByteArray>, val accountsTmp:
  * Streams the archive: small JSON/font entries into memory, the accounts chat-database
  * archive (potentially huge) straight to a temp file — only when its import is wanted.
  */
-private fun readUiImportZip(uri: URI, wantAccounts: Boolean): UiImportData {
+private fun readUiImportZip(openIn: () -> InputStream, wantAccounts: Boolean): UiImportData {
   val entries = HashMap<String, ByteArray>()
   var accountsTmp: File? = null
   try {
-    val ins = uri.inputStream() ?: error("no input stream")
-    ZipInputStream(ins).use { zip ->
+    ZipInputStream(openIn()).use { zip ->
       var e = zip.nextEntry
       while (e != null) {
         if (!e.isDirectory) {
@@ -491,6 +491,47 @@ suspend fun runHeadlessUiExport(
       startChat(chatModel, mutableStateOf(appPrefs.chatLastStart.get()), chatModel.chatDbChanged, null)
     }
   }
+}
+
+/**
+ * The data door's import (contract v2 §2a): put an archive back with no Activity, no dialog and
+ * no confirmation — the caller (応用管理) has already decided, and on a clean phone there is
+ * nobody to ask.
+ *
+ * `import` deliberately exists ONLY behind the provider, never as a broadcast action: it
+ * overwrites this app's data, and the §1 receiver is exported with no permission, so an import
+ * there would let any app on the phone wipe the messenger.
+ *
+ * Takes an [archive] already spooled to disk rather than a stream. That is the contract's rule
+ * for an app whose backup carries a corpus — this one embeds the whole chat database and its
+ * files — and it also buys the guarantee that matters: nothing is written until the entire
+ * archive has arrived and its manifest has been checked. A partial read that failed halfway
+ * would otherwise leave half a restore, which is worse than a refusal.
+ *
+ * With Accounts in the archive the chat is stopped and **left stopped**: the database underneath
+ * it has just been replaced, and the caller force-stops this app the instant it hears success —
+ * a running process writes its cached preferences back out at orderly shutdown and would
+ * silently undo the import that just happened.
+ */
+suspend fun runHeadlessUiImport(archive: File, sel: UiEximSelection): String {
+  if (sel.isEmpty()) throw IllegalArgumentException("no categories selected")
+  val data = withContext(Dispatchers.IO) {
+    readUiImportZip({ archive.inputStream() }, UiEximCategory.ACCOUNTS in sel.cats)
+  }
+  val accountsTmp = data.accountsTmp
+  val lines = ArrayList<String>()
+  try {
+    if (accountsTmp != null) {
+      if (chatModel.chatRunning.value != false) stopChatAsync(chatModel)
+      lines.add(importAccountsArchive(accountsTmp))
+    }
+    withContext(Dispatchers.IO) { lines.addAll(applyUiPrefEntries(data.entries, sel)) }
+  } catch (e: Throwable) {
+    accountsTmp?.delete()
+    throw e
+  }
+  if (lines.isEmpty()) error("the archive contains none of the selected categories")
+  return lines.joinToString("; ")
 }
 
 // ───────────────────────── panel ─────────────────────────
@@ -754,7 +795,9 @@ private fun runUiImport(uri: URI, state: UiEximState) {
   val sel = state.selection()
   withLongRunningApi {
     val data = try {
-      withContext(Dispatchers.IO) { readUiImportZip(uri, UiEximCategory.ACCOUNTS in sel.cats) }
+      withContext(Dispatchers.IO) {
+        readUiImportZip({ uri.inputStream() ?: error("no input stream") }, UiEximCategory.ACCOUNTS in sel.cats)
+      }
     } catch (e: Throwable) {
       Log.e(TAG, "UI import failed: ${e.stackTraceToString()}")
       AlertManager.shared.showAlertMsg("Import failed", e.message ?: e.toString())
