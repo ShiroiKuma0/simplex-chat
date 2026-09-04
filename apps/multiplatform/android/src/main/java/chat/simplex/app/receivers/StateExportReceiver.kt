@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
 import chat.simplex.app.BuildConfig
+import chat.simplex.app.automation.AutomationProgressReporter
 import chat.simplex.common.model.ChatController.appPrefs
 import chat.simplex.common.platform.*
 import chat.simplex.common.views.usersettings.*
@@ -76,22 +77,21 @@ class StateExportReceiver: BroadcastReceiver() {
     }
 
     try {
-      val auth = AutomationAuth.check(intent.getStringExtra("token"))
+      // contract v2: the whole gate in one call. The switch is on by default and the token is
+      // only consulted when 白い熊 has asked for one — a token sent to an app that does not
+      // require one is ignored here, never refused.
+      val refusal = AutomationAuth.refuse(intent.getStringExtra("token"))
       if (action == ACTION_CANCEL_EXPORT) {
         // Fire-and-forget: this action answers nothing, not even to refuse. Its reply_id is the
         // *export's*, so any reply sent here would reach 保存復元 on that request's channel and
         // be taken for its terminal answer — while the export is still unwinding and about to
-        // send the real one. A bad token is refused in the log and nowhere else.
-        if (auth == AutomationAuth.Result.OK) cancelExport(replyId)
-        else Log.w(TAG, "CANCEL_EXPORT [$replyId] refused: $auth")
+        // send the real one. A refusal is logged and goes nowhere else.
+        if (refusal == null) cancelExport(replyId)
+        else Log.w(TAG, "CANCEL_EXPORT [$replyId] refused: $refusal")
         runCatching { pending.finish() }
         return
       }
-      when (auth) {
-        AutomationAuth.Result.DISABLED -> return reply("ERROR:automation disabled")
-        AutomationAuth.Result.BAD_TOKEN -> return reply("ERROR:bad token")
-        AutomationAuth.Result.OK -> {}
-      }
+      if (refusal != null) return reply(refusal)
       when (action) {
         ACTION_LIST_CATEGORIES -> reply(listCategories())
         ACTION_EXPORT_STATE -> CoroutineScope(Dispatchers.IO).launch {
@@ -173,7 +173,8 @@ class StateExportReceiver: BroadcastReceiver() {
 
     val progressAction = intent.getStringExtra("progress_action")
     val replyPackage = intent.getStringExtra("reply_package")
-    val progress = progressReporter(context, progressAction, replyPackage, replyId)
+    // the same reporter the data door uses — one implementation of the watchdog, not two
+    val progress = AutomationProgressReporter(context, progressAction, replyPackage, replyId).onProgress
 
     // registered before the first thing worth interrupting, so a cancel fired straight after the
     // export request still lands — the chat-ready wait below can run for a minute on a cold start
@@ -294,39 +295,6 @@ class StateExportReceiver: BroadcastReceiver() {
     null
   }
 
-  // ───────────────────────── progress ─────────────────────────
-
-  /** Real counts, never a percentage; at most one broadcast every 500 ms plus a final one. */
-  private fun progressReporter(
-    context: Context,
-    progressAction: String?,
-    replyPackage: String?,
-    replyId: String,
-  ): UiEximProgress {
-    if (progressAction == null || replyPackage == null) return { _, _, _, _ -> }
-    var last = 0L
-    return { current, total, unit, text ->
-      val now = System.currentTimeMillis()
-      if (current >= total || now - last >= PROGRESS_INTERVAL_MS) {
-        last = now
-        try {
-          context.sendBroadcast(Intent(progressAction).apply {
-            setPackage(replyPackage)
-            addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
-            putExtra("reply_id", replyId)
-            putExtra("app", APP_LABEL)
-            putExtra("text", text)
-            putExtra("current", current)
-            putExtra("total", total)
-            putExtra("unit", unit)
-          })
-        } catch (e: Throwable) {
-          Log.w(TAG, "progress broadcast failed: ${e.message}")
-        }
-      }
-    }
-  }
-
   private fun shortReason(e: Throwable): String =
     (e.message ?: e::class.simpleName ?: "failed").lineSequence().first().take(160)
 
@@ -336,9 +304,6 @@ class StateExportReceiver: BroadcastReceiver() {
     val ACTION_EXPORT_STATE = "${BuildConfig.APPLICATION_ID}.action.EXPORT_STATE"
     val ACTION_LIST_CATEGORIES = "${BuildConfig.APPLICATION_ID}.action.LIST_CATEGORIES"
     val ACTION_CANCEL_EXPORT = "${BuildConfig.APPLICATION_ID}.action.CANCEL_EXPORT"
-    private const val APP_LABEL = "白い熊 SimpleX"
-    private const val PROGRESS_INTERVAL_MS = 500L
-
     // process-wide, because each broadcast gets its own receiver instance: the CANCEL_EXPORT
     // that arrives minutes after EXPORT_STATE has no other way back to the run it must stop
     private val runningExports = CopyOnWriteArrayList<ExportRun>()

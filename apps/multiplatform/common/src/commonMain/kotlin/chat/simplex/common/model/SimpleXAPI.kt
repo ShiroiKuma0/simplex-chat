@@ -290,11 +290,18 @@ class AppPreferences {
   // path). Device-local by design — deliberately excluded from every export category.
   val uiExportDirectory = mkStrPreference(SHARED_PREFS_UI_EXPORT_DIRECTORY, null)
   // downstream (shiroikuma): the 保存復元 automation gate — sister apps may trigger a headless
-  // export through a token-gated broadcast. Both are device-local and deliberately excluded from
-  // every export category, so the token never travels inside a backup. See ShiroikumaAutomation.kt.
+  // export, and (contract v2) move this app's data through the AutomationProvider door. All three
+  // are device-local and deliberately excluded from every export category, so neither the token
+  // nor the require-flag ever travels inside a backup. See ShiroikumaAutomation.kt.
   // one-shot: rewrite a stored legacy translucent secondary colour to the opaque default
   val secondaryOpaqueApplied = mkBoolPreference(SHARED_PREFS_SECONDARY_OPAQUE_APPLIED, false)
-  val automationEnabled = mkBoolPreference(SHARED_PREFS_AUTOMATION_ENABLED, false)
+  // v2 default ON: the contract's whole point is a phone that has just been wiped, where nobody
+  // has configured anything and 応用管理 is restoring this app from an APK and a descriptor. A
+  // gate that only opens once the phone is already set up is no gate for setting the phone up.
+  val automationEnabled = mkBoolPreference(SHARED_PREFS_AUTOMATION_ENABLED, true)
+  // v2, new: default OFF. A pasted secret cannot survive a wipe, so the token is an extra a
+  // caller may be asked for rather than the gate. See AutomationAuth.refuse().
+  val automationRequireToken = mkBoolPreference(SHARED_PREFS_AUTOMATION_REQUIRE_TOKEN, false)
   val automationToken = mkStrPreference(SHARED_PREFS_AUTOMATION_TOKEN, null)
   val fontScale = mkFloatPreference(SHARED_PREFS_FONT_SCALE, 1f)
   val densityScale = mkFloatPreference(SHARED_PREFS_DENSITY_SCALE, 1f)
@@ -590,6 +597,7 @@ class AppPreferences {
     // device-local automation gate (保存復元 contract) — never exported, see ShiroikumaAutomation.kt
     private const val SHARED_PREFS_SECONDARY_OPAQUE_APPLIED = "SecondaryOpaqueApplied"
     private const val SHARED_PREFS_AUTOMATION_ENABLED = "automation_enabled"
+    private const val SHARED_PREFS_AUTOMATION_REQUIRE_TOKEN = "automation_require_token"
     private const val SHARED_PREFS_AUTOMATION_TOKEN = "automation_token"
     private const val SHARED_PREFS_DENSITY_SCALE = "DensityScale"
     private const val SHARED_PREFS_IN_APP_BARS_ALPHA = "InAppBarsAlpha"

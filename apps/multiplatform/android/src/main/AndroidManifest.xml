@@ -32,6 +32,8 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+  <!-- downstream (shiroikuma): the automation data door's export/import service -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
   <!-- Allows to query app name and icon that can open specific file type -->
   <queries>
@@ -39,6 +41,14 @@
       <action android:name="android.intent.action.VIEW" />
       <data android:mimeType="*/*" />
     </intent>
+    <!-- downstream (shiroikuma): BOTH automation callers, and this is load-bearing. Package
+         visibility is what makes setPackage() resolve on Android 11+; without the package named
+         here the reply broadcast is dropped silently — the export runs, writes correctly, and is
+         never heard of. This element existed but named no package at all, so every 保存復元 reply
+         this fork ever sent was discarded. 自由作業盤 drives the batch (§1); 応用管理 drives the
+         data door (§2a). Listing only one leaves the other inaudible. -->
+    <package android:name="shiroikuma.oyokanri" />
+    <package android:name="shiroikuma.jiyusagyoban" />
   </queries>
 
   <application
@@ -228,6 +238,37 @@
         <action android:name="${applicationId}.action.CANCEL_EXPORT" />
       </intent-filter>
     </receiver>
+
+    <!-- downstream (shiroikuma): the automation data door (contract v2 §2a) — 応用管理 backs this
+         app up WITH its data and puts it back on a wiped phone. Exported with no permission on
+         purpose: a custom permission would have to be `normal` (any app may hold it) or
+         `signature` (impossible — every app in this family has its own keystore). The caller is
+         identified instead, three ways, in AutomationCallers: an exact package name, the uid the
+         kernel reports, and a pinned signing certificate. -->
+    <provider
+        android:name=".automation.AutomationProvider"
+        android:authorities="${applicationId}.automation"
+        android:exported="true" />
+
+    <!-- Not exported: the provider starts it, and nothing outside this app may. The payload moves
+         through a descriptor the caller opened, which is why this can run for minutes. -->
+    <service
+        android:name=".automation.AutomationDataService"
+        android:enabled="true"
+        android:exported="false"
+        android:foregroundServiceType="specialUse">
+      <property
+          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+          android:value="Automation data export/import" />
+    </service>
+
+    <!-- Capability discovery, readable WITHOUT waking this app — 白い熊 freezes apps aggressively
+         and a frozen app cannot be asked anything, so 応用管理 reads these across every installed
+         package at once with MATCH_UNINSTALLED_PACKAGES | MATCH_DISABLED_COMPONENTS. An app
+         without them is simply not offered for data backup or restore. -->
+    <meta-data android:name="shiroikuma.automation.contract" android:value="2" />
+    <meta-data android:name="shiroikuma.automation.format" android:value="1" />
+    <meta-data android:name="shiroikuma.automation.min_format" android:value="1" />
 
     <!-- SimplexService restart on app update -->
     <receiver
