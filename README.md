@@ -6,11 +6,11 @@
 
 **SimpleX Chat for Android that plays nice with dictionary keyboards — restyled black-yellow, customizable down to the tick.**
 
-A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **major additions**: an IME-commit-race fix that makes dictionary keyboards (Multiling O, Czech autocorrect, CJK input) work in the message field, the **白い熊 Simplex UI** page — every color, font, bubble, and tick in the app settable in one place, with export/import of the whole configuration **including your accounts**, backed up headlessly on request by an automation app — and a black-yellow fork identity.
+A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **major additions**: an IME-commit-race fix that makes dictionary keyboards (Multiling O, Czech autocorrect, CJK input) work in the message field, the **白い熊 Simplex UI** page — every color, font, bubble, and tick in the app settable in one place, with export/import of the whole configuration **including your accounts**, backed up headlessly on request by a sister app and restorable onto a wiped phone — and a black-yellow fork identity.
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.1-beta.0+1`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.1-beta.0+3`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -34,11 +34,15 @@ The top of the UI page: pick an export directory once and it shows your latest e
 
 ---
 
-## 🤖 Backed up on command, without touching the phone
+## 🤖 Backed up on command — and restored onto a clean phone
 
-The same export runs **headlessly** when an automation task asks for it. A token-gated broadcast — the token lives on the UI page, is copied with a tap, and is regenerable — makes the app write exactly one ZIP wherever the caller names, report progress in real counts (`区分 3/8 — Chat bubbles`, or `512 MB / 4.2 GB` while streaming the chat database), and reply with the written path and its exact size. Categories are selectable by id, down to sub-options such as the font files alone, and the app *states* which ones should start ticked rather than leaving the caller to guess.
+The same export runs **headlessly** when a sister app asks for it: the app writes exactly one ZIP wherever the caller names, reports progress in real counts (`区分 3/8 — Chat bubbles`, or `512 MB / 4.2 GB` while streaming the chat database), and replies with the written path and its exact size. Categories are selectable by id, down to sub-options such as the font files alone, and the app *states* which ones should start ticked rather than leaving the caller to guess.
 
-A running export can also be **stopped from outside**, and stopping it means stopping it: the archive is written under a temporary name and only claims the real one once complete, so a cancelled run leaves the backup directory exactly as it found it — no half-written backup that looks finished. The check runs between the copy buffers of the chat database, not just between categories, so a cancel during a multi-gigabyte export takes effect in milliseconds instead of playing out to the end. Off by default; nothing responds until the switch is on.
+It now also **puts the data back**. A content provider exposes describe / export / import / cancel, moving the archive through a file descriptor the caller opens — so a companion app can reinstall this fork on a wiped phone and restore its accounts, settings and fonts into it without the app ever having been opened. That door does not trust a shared secret: it identifies the caller by exact package name, by the uid the kernel reports, and by a pinned signing certificate, and **import is reachable only there** — never by broadcast, because an import overwrites your data.
+
+The authorization token is therefore **optional now, and off by default** — a pasted secret cannot survive the wipe this feature exists to recover from. Turn 「Use authorization token?」 on and callers must present the token as well; leave it off and a token sent anyway is quietly ignored rather than refused. The master switch stays, so one app can still be closed off entirely.
+
+A running export can also be **stopped from outside**, and stopping it means stopping it: the archive is written under a temporary name and only claims the real one once complete, so a cancelled run leaves the backup directory exactly as it found it — no half-written backup that looks finished. The check runs between the copy buffers of the chat database, not just between categories, so a cancel during a multi-gigabyte export takes effect in milliseconds instead of playing out to the end.
 
 ---
 
@@ -68,7 +72,7 @@ The launcher icon is restyled into the fork's black/yellow scheme — the Simple
 
 ## 📦 Tracks upstream fast, ships lean
 
-The fork rebases onto every new upstream release — **betas included** — usually days after it ships, and this build sits on upstream **7.1-beta.0** the day it landed. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.1-beta.0+1`), with version codes that always sort above the corresponding upstream build. Since upstream split Android into `google` (Play Billing) and `foss` variants in 7.1, this is a **`foss`** build — no Play dependencies.
+The fork rebases onto every new upstream release — **betas included** — usually days after it ships, and this build sits on upstream **7.1-beta.0** the day it landed. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.1-beta.0+3`), with version codes that always sort above the corresponding upstream build. Since upstream split Android into `google` (Play Billing) and `foss` variants in 7.1, this is a **`foss`** build — no Play dependencies.
 
 ---
 

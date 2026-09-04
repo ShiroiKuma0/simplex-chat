@@ -7,6 +7,22 @@ SimpleX Chat release history unchanged below.
 
 # 白い熊 SimpleX — fork releases
 
+## 白い熊 SimpleX 7.1-beta.0+3 — 2026-09-04
+
+Built on upstream **v7.1.0-beta.0**.
+
+**保存復元 automation — contract v2**
+- **The authorization token is now optional, and off by default.** Automation ships enabled instead of closed, and 「Use authorization token?」 is an extra a caller may be asked for rather than the gate. A pasted secret cannot survive a wipe, which is exactly the situation this feature exists to recover from. A token sent to the app when it is not asking for one is **ignored, never refused** — callers keep sending tokens configured long ago, and refusing them would turn one switch into half a backup batch mysteriously failing. Both checks now live in a single function so "disabled" and "bad token" cannot drift apart.
+- **A data door: this app can be backed up *with its data* and restored onto a wiped phone.** A content provider exposes `describe` / `export` / `import` / `cancel`. The archive moves through a **file descriptor the caller opens** rather than a path, so the backup stays inside the caller's own encryption and integrity checks instead of landing beside them; long transfers run in a foreground service and report progress as they go.
+- **The door identifies its caller instead of trusting a secret**: an exact package name (never a prefix — a name can be claimed while the real package is absent, which is precisely the clean-phone case), the uid the kernel reports, and a **pinned signing certificate**. `import` is reachable **only** here and never by broadcast, because an import overwrites the app's data.
+- Capability discovery is published in the manifest, so a companion app can tell whether this app can be backed up **without waking it** — a frozen app cannot be asked anything.
+
+**Fixes**
+- **Every automation reply this fork sent was being discarded silently.** The manifest declared a `<queries>` element that named no package, and on Android 11+ package visibility is what makes a targeted broadcast resolve at all — so the export ran, wrote its archive correctly, and was never heard by the app that asked for it. Both callers are now named. The same visibility also gates the identity checks the new data door performs.
+- **A restore could report success over settings that were never written.** Preferences are persisted through a library whose default is an asynchronous write, and the caller force-stops this app the moment it hears success — so an import now flushes synchronously *before* replying.
+- **A repeated backup request could kill the app.** Once a service has been started in the foreground it must say so whatever it then decides; a request carrying an already-handled job id returned early without doing that, which the platform punishes by killing the process.
+- **A slow backup could be mistaken for a dead app.** Progress was only sent when the export had something new to report, but the destination is a descriptor the *caller* drains — a single write can block for as long as the reader is slow. Progress now also beats on a timer, independently of the work.
+
 ## 白い熊 SimpleX 7.1-beta.0+1 — 2026-08-14
 
 Built on upstream **v7.1.0-beta.0**.
