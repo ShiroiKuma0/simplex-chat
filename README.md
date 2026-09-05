@@ -10,7 +10,7 @@ A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **ma
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.1-beta.0+3`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.1-beta.0+004`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -72,7 +72,7 @@ The launcher icon is restyled into the fork's black/yellow scheme — the Simple
 
 ## 📦 Tracks upstream fast, ships lean
 
-The fork rebases onto every new upstream release — **betas included** — usually days after it ships, and this build sits on upstream **7.1-beta.0** the day it landed. APKs are `arm64-v8a` only and versioned `<upstream>+<build>` (e.g. `7.1-beta.0+3`), with version codes that always sort above the corresponding upstream build. Since upstream split Android into `google` (Play Billing) and `foss` variants in 7.1, this is a **`foss`** build — no Play dependencies.
+The fork rebases onto every new upstream release — **betas included** — usually days after it ships, and this build sits on upstream **7.1-beta.0** the day it landed. APKs are `arm64-v8a` only and versioned `<upstream>+<build>`, the counter zero-padded to three digits (e.g. `7.1-beta.0+004`), with version codes that always sort above the corresponding upstream build. Since upstream split Android into `google` (Play Billing) and `foss` variants in 7.1, this is a **`foss`** build — no Play dependencies.
 
 ---
 
