@@ -7,6 +7,16 @@ SimpleX Chat release history unchanged below.
 
 # 白い熊 SimpleX — fork releases
 
+## 白い熊 SimpleX 7.1-beta.0+004 — 2026-09-05
+
+Built on upstream **v7.1.0-beta.0**.
+
+**No functional change from `7.1-beta.0+3`** — the application code is identical. This build exists to adopt the family-wide build-counter format.
+
+**Versioning**
+- The build counter is now **zero-padded to three digits** in the version name, and therefore in the APK filename and in this tag: `7.1-beta.0+004` rather than `7.1-beta.0+3`. Unpadded counters sort lexicographically wrong — `+10` lands before `+3` — which buries the newest build in the middle of a directory listing, of the phone's file manager, and of the release list. The version *code* is unchanged in form and keeps the plain integer (`3690004`): the padding is text, the code is arithmetic.
+- Everything already released keeps its name. `7.1-beta.0+1` and `7.1-beta.0+3` are not renamed or retagged, so padded names will sort before those older ones until they age out.
+
 ## 白い熊 SimpleX 7.1-beta.0+3 — 2026-09-04
 
 Built on upstream **v7.1.0-beta.0**.
