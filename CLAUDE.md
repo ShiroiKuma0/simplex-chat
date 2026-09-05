@@ -17,7 +17,7 @@ Per-version snapshot tags `shiroikuma-v<UPSTREAM>` mark each built release on `c
 Two skills in `.claude/skills/` carry this project's workflow. Read the relevant `SKILL.md` before starting work — they encode hard-won build-environment quirks and gotchas you won't find in the source.
 
 - **`simplex-chat-build`** — the canonical reference for any task touching this fork: branch model, one-time setup, per-version `git rebase --onto` workflow, build pipeline (lift Haskell `.so` from official APK + gradle release + sign), the versioning/bump scheme, deploy to `~/tmp/` and `/sdcard/tmp/`, the IME-fix and identity-commit reference diffs, the JDK-21 / Gradle daemon requirements, and the fallback when a rebase gets too tangled.
-- **`upstream-new-version`** (orchestration over the above) — the `/upstream-new-version` flow: check whether upstream has a newer release (**newest tag by version order, betas/rc included**) and, if so, fast-forward `master`, rebase the `custom` stack onto the new tag (auto-reconcile small conflicts; **stop and plan with the user** when significant), check whether the IME fix is still needed, then build + deploy the new `+1` via `simplex-chat-build`. Defers all pushing until the user says "push". Read this when the user wants to sync/update to a new upstream release.
+- **`upstream-new-version`** (orchestration over the above) — the `/upstream-new-version` flow: check whether upstream has a newer release (**newest tag by version order, betas/rc included**) and, if so, fast-forward `master`, rebase the `custom` stack onto the new tag (auto-reconcile small conflicts; **stop and plan with the user** when significant), check whether the IME fix is still needed, then build + deploy the new `+001` via `simplex-chat-build`. Defers all pushing until the user says "push". Read this when the user wants to sync/update to a new upstream release.
 
 ## Quick reference
 
@@ -26,7 +26,7 @@ Two skills in `.claude/skills/` carry this project's workflow. Read the relevant
 | Upstream | `https://github.com/simplex-chat/simplex-chat` (fetch only — push disabled) |
 | Fork | `git@github.com:ShiroiKuma0/simplex-chat.git` (origin, SSH push) |
 | Local working tree | `~/git/shiroikuma-simplex` |
-| Output APKs | `~/tmp/shiroikuma-simplex_<upstream>+<bump>_arm64-v8a.apk` (e.g. `shiroikuma-simplex_6.5.3+1_arm64-v8a.apk`; version `<upstream>+<bump>`, code `<upstream code>×10000+bump`) |
+| Output APKs | `~/tmp/shiroikuma-simplex_<upstream>+<bump>_arm64-v8a.apk`, **`<bump>` zero-padded to three digits** (e.g. `shiroikuma-simplex_6.5.3+001_arm64-v8a.apk`; version `<upstream>+<bump>`, code `<upstream code>×10000+bump` — the code takes the plain integer). Padding is the global `/after-build` rule and applies here too, tags included; releases already published unpadded (up to `7.1-beta.0+3`) are never renamed. |
 | On-device deploy | `/sdcard/tmp/` (via `adb push`, install with phone file manager) |
 | Build JDK | OpenJDK 21 at `/usr/lib/jvm/java-21-openjdk-amd64` |
 | Signing keystore | `~/.android-keystores/simplex-custom.jks` (alias `simplex`, passphrase `simplex123`) |

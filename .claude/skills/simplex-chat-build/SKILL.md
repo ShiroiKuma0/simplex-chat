@@ -233,10 +233,14 @@ grep -n 'freshCs\|TYPE_TEXT_FLAG_AUTO_CORRECT' apps/multiplatform/common/src/and
 
 Every custom build's version is derived from the upstream release it was built from, plus a **build bump** that increments on each build — so custom builds install over each other (monotonic `versionCode`) and read as distinct from upstream.
 
-- **`versionName`** = `<upstream versionName>+<BUMP>` — upstream `6.5.3` → `6.5.3+1`, `6.5.3+2`, …
-- **`versionCode`** = `<upstream versionCode> × 10000 + BUMP` — upstream `351` → `3510001`, `3510002`, …. The `×10000` leaves room for 9999 custom builds per upstream version; the next upstream code (`352` → `3520001`) always sorts above.
+- **`versionName`** = `<upstream versionName>+<BUMP>`, **`BUMP` zero-padded to three digits** — upstream `6.5.3` → `6.5.3+001`, `6.5.3+002`, …
+- **`versionCode`** = `<upstream versionCode> × 10000 + BUMP` — upstream `351` → `3510001`, `3510002`, …. The `×10000` leaves room for 9999 custom builds per upstream version; the next upstream code (`352` → `3520001`) always sorts above. **The code takes the plain integer — padding is text, the code is arithmetic.**
 - **`BUMP`** = **1** for the first build after a rebase onto a new upstream tag, +1 for each rebuild on the same upstream base.
-- **APK filename** = `shiroikuma-simplex_<versionName>_arm64-v8a.apk` — e.g. `shiroikuma-simplex_6.5.3+1_arm64-v8a.apk`. No timestamp; `+BUMP` is the unique discriminator.
+- **APK filename** = `shiroikuma-simplex_<versionName>_arm64-v8a.apk` — e.g. `shiroikuma-simplex_6.5.3+001_arm64-v8a.apk`. No timestamp; `+BUMP` is the unique discriminator.
+
+**The padding is a hard global rule** (白い熊, 2026-08-01; `/after-build` → *The `+N` is ALWAYS zero-padded to three digits*) and it **applies to this repo like every other**, including the tag `/publish-version` derives from the APK filename. Unpadded counters sort lexicographically wrong — `+10` lands before `+3` — which buries the newest build in the middle of `~/tmp/`, of the phone's file manager and of the release list.
+
+**This repo published unpadded tags up to `7.1-beta.0+3` (2026-09-04).** Those stay exactly as they are: *never rename or retag what is already built or released* — the repo simply carries on padded from its next build, so `7.1-beta.0+004` follows `7.1-beta.0+3`. For a while the padded names sort *before* the older unpadded ones (`+004` < `+3` as text); that settles itself as the old builds age out. When computing the next bump from existing filenames, strip leading zeros (or use `10#`) so `008` is not read as octal.
 
 Upstream's `versionName`/`versionCode` are the committed values in `apps/multiplatform/gradle.properties` (`android.version_name` / `android.version_code`) — the identity commit does **not** touch them. The custom version is injected at **build time** and reverted afterward (never committed, since it changes every build). The derivation + injection is the "Set the custom build version" build step below.
 
