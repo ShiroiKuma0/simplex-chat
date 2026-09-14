@@ -7,6 +7,17 @@ SimpleX Chat release history unchanged below.
 
 # 白い熊 SimpleX — fork releases
 
+## 白い熊 SimpleX 7.1-beta.0+006 — 2026-09-14
+
+Built on upstream **v7.1.0-beta.0**.
+
+**UI**
+- **Every alert dialog now has a yellow border.** On the black-yellow theme a dialog's surface is the same colour as the dimmed screen behind it, so a dialog such as the background-service notice (「通知の常時受信」) floated as bare text with no visible edge at all. All thirteen dialog builders — the eight in the shared alert manager, which every delete-message, leave-group, clear-chat, contact-request, time-picker and similar dialog in the app funnels through, and the five Android service notices (background service, battery optimisation, system-restricted, restricted-in-call, service disabled), which build their dialogs directly — now draw the same 2 dp accent border, in the dialog's 25 dp rounded shape, that the export/import result dialogs already had.
+- **Every pop-up menu has the same border**: the long-press message menu and the reaction picker, the chat-list item menus, the chat-view toolbar menus, member, tag and server menus, the attachment menu in the message box, and the drop-down pickers on settings rows. The border is drawn in the popup's own rounded shape and lands exactly on its clipped edge.
+- The border colour is the **accent**, so it follows whatever accent is set on the 白い熊 Simplex UI page rather than being hard-coded yellow.
+
+`7.1-beta.0+005` was an intermediate build carrying only the dialog half; it was never published.
+
 ## 白い熊 SimpleX 7.1-beta.0+004 — 2026-09-05
 
 Built on upstream **v7.1.0-beta.0**.
