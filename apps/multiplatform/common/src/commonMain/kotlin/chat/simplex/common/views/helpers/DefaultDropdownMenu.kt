@@ -1,6 +1,7 @@
 package chat.simplex.common.views.helpers
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,14 +19,19 @@ fun DefaultDropdownMenu(
   onClosed: State<() -> Unit> = remember { mutableStateOf({}) },
   dropdownMenuItems: (@Composable () -> Unit)?
 ) {
+  // downstream (shiroikuma): the popup is clipped to `medium`, so a border in the same shape on
+  // the content column lands exactly on its rounded edge — on the black-yellow theme the menu
+  // surface is otherwise indistinguishable from the screen behind it (same as the alert dialogs).
+  val shape = RoundedCornerShape(corner = CornerSize(25.dp))
   MaterialTheme(
-    shapes = MaterialTheme.shapes.copy(medium = RoundedCornerShape(corner = CornerSize(25.dp)))
+    shapes = MaterialTheme.shapes.copy(medium = shape)
   ) {
     DropdownMenu(
       expanded = showMenu.value,
       onDismissRequest = { showMenu.value = false },
       modifier = modifier
         .widthIn(min = 250.dp)
+        .border(2.dp, MaterialTheme.colors.primary, shape)
         .background(MaterialTheme.colors.surface)
         .padding(vertical = 4.dp),
       offset = offset,
@@ -46,12 +52,14 @@ fun ExposedDropdownMenuBoxScope.DefaultExposedDropdownMenu(
   modifier: Modifier = Modifier,
   dropdownMenuItems: (@Composable () -> Unit)?
 ) {
+  val shape = RoundedCornerShape(corner = CornerSize(25.dp))
   MaterialTheme(
-    shapes = MaterialTheme.shapes.copy(medium = RoundedCornerShape(corner = CornerSize(25.dp)))
+    shapes = MaterialTheme.shapes.copy(medium = shape)
   ) {
     ExposedDropdownMenu(
       modifier = Modifier
         .widthIn(min = 200.dp)
+        .border(2.dp, MaterialTheme.colors.primary, shape)   // downstream (shiroikuma), see above
         .background(MaterialTheme.colors.surface)
         .then(modifier),
       expanded = expanded.value,

@@ -10,8 +10,6 @@ import android.os.*
 import android.os.SystemClock
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CornerSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -497,7 +495,8 @@ class SimplexService: Service() {
         confirmButton = {
           TextButton(onClick = AlertManager.shared::hideAlert) { Text(stringResource(MR.strings.ok)) }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
 
@@ -557,7 +556,8 @@ class SimplexService: Service() {
           confirmButton = {
             TextButton(onClick = ignoreOptimization) { Text(stringResource(MR.strings.turn_off_battery_optimization_button)) }
           },
-          shape = RoundedCornerShape(corner = CornerSize(25.dp))
+          shape = alertDialogShape,
+          modifier = Modifier.alertDialogBorder()
         )
       }
     }
@@ -601,7 +601,8 @@ class SimplexService: Service() {
         confirmButton = {
           TextButton(onClick = unrestrict) { Text(stringResource(MR.strings.turn_off_system_restriction_button)) }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
 
@@ -629,7 +630,8 @@ class SimplexService: Service() {
         confirmButton = {
           TextButton(onClick = unrestrict) { Text(stringResource(MR.strings.turn_off_system_restriction_button)) }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
       val scope = rememberCoroutineScope()
       DisposableEffect(Unit) {
@@ -674,7 +676,8 @@ class SimplexService: Service() {
         confirmButton = {
           TextButton(onClick = AlertManager.shared::hideAlert) { Text(stringResource(MR.strings.ok)) }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
 

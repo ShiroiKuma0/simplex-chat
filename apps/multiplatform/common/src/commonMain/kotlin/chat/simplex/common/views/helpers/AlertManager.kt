@@ -1,5 +1,6 @@
 package chat.simplex.common.views.helpers
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CornerSize
@@ -13,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
@@ -65,7 +67,8 @@ class AlertManager {
             buttons()
           }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
   }
@@ -97,7 +100,8 @@ class AlertManager {
             }
           }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
   }
@@ -118,7 +122,8 @@ class AlertManager {
             buttons()
           }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
   }
@@ -168,7 +173,8 @@ class AlertManager {
             AlertContent(text?.let { AnnotatedString(it) }, hostDevice, true, content = buttonRow)
           }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
   }
@@ -204,7 +210,8 @@ class AlertManager {
             }
           }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
   }
@@ -253,7 +260,8 @@ class AlertManager {
             }
           }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
   }
@@ -273,7 +281,8 @@ class AlertManager {
             }
           }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
   }
@@ -420,7 +429,8 @@ class AlertManager {
             }
           }
         },
-        shape = RoundedCornerShape(corner = CornerSize(25.dp))
+        shape = alertDialogShape,
+        modifier = Modifier.alertDialogBorder()
       )
     }
   }
@@ -435,6 +445,15 @@ class AlertManager {
     val privacySensitive = AlertManager()
   }
 }
+
+// downstream (shiroikuma): every alert dialog is drawn with an accent border. On the black-yellow
+// theme the dialog surface is the same colour as the scrimmed screen behind it, so without one the
+// dialog has no visible edge at all (the export/import result dialogs in ShiroikumaUIExim set the
+// precedent). Shared by every AlertDialog here and by the service notices in SimplexService.
+val alertDialogShape = RoundedCornerShape(corner = CornerSize(25.dp))
+
+@Composable
+fun Modifier.alertDialogBorder(shape: Shape = alertDialogShape): Modifier = border(2.dp, MaterialTheme.colors.primary, shape)
 
 private fun alertTitle(title: String): (@Composable () -> Unit)? {
   return {
