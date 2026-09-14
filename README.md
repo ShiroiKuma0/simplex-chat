@@ -10,7 +10,7 @@ A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **ma
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.1-beta.0+004`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.1-beta.0+006`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -54,7 +54,7 @@ Scale the sent/delivered indicators from 1× to 15×, set their stroke thickness
 
 ## 🖤 Truly black surfaces, marked in yellow
 
-Stock lifts "raised" dark surfaces by mixing a few percent of the text color into the background — which on a black/yellow theme comes out olive-green. Here every surface is pure black and separated by a **rounded yellow border** instead: the profile sheet, every settings card, the app bars, the one-hand chooser. The muted color that carries timestamps, delivery dots, date headers and toolbar icons was translucent yellow (`#99ffff00` — literally `#999900` over black); it is opaque `#FFFF00` now.
+Stock lifts "raised" dark surfaces by mixing a few percent of the text color into the background — which on a black/yellow theme comes out olive-green. Here every surface is pure black and separated by a **rounded yellow border** instead: the profile sheet, every settings card, the app bars, the one-hand chooser — and every **alert dialog and pop-up menu**, which on black otherwise floated as bare text with no visible edge. The muted color that carries timestamps, delivery dots, date headers and toolbar icons was translucent yellow (`#99ffff00` — literally `#999900` over black); it is opaque `#FFFF00` now.
 
 ---
 
@@ -72,7 +72,7 @@ The launcher icon is restyled into the fork's black/yellow scheme — the Simple
 
 ## 📦 Tracks upstream fast, ships lean
 
-The fork rebases onto every new upstream release — **betas included** — usually days after it ships, and this build sits on upstream **7.1-beta.0** the day it landed. APKs are `arm64-v8a` only and versioned `<upstream>+<build>`, the counter zero-padded to three digits (e.g. `7.1-beta.0+004`), with version codes that always sort above the corresponding upstream build. Since upstream split Android into `google` (Play Billing) and `foss` variants in 7.1, this is a **`foss`** build — no Play dependencies.
+The fork rebases onto every new upstream release — **betas included** — usually days after it ships; it moved onto upstream **7.1-beta.0** the day that landed, and this build sits on it. APKs are `arm64-v8a` only and versioned `<upstream>+<build>`, the counter zero-padded to three digits (e.g. `7.1-beta.0+006`), with version codes that always sort above the corresponding upstream build. Since upstream split Android into `google` (Play Billing) and `foss` variants in 7.1, this is a **`foss`** build — no Play dependencies.
 
 ---
 
