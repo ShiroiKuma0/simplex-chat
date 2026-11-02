@@ -7,6 +7,21 @@ SimpleX Chat release history unchanged below.
 
 # 白い熊 SimpleX — fork releases
 
+## 白い熊 SimpleX 7.1-beta.0+007 — 2026-11-02
+
+Built on upstream **v7.1.0-beta.0**.
+
+**Fixes & behavior — background notifications**
+- **The background service now restarts after the system stops it.** Upstream's restart paths — `START_STICKY`, the `onDestroy` broadcast to `AutoRestartReceiver`, the periodic `ServiceStartWorker`, the boot and app-update receivers — all end in one worker that started the service only when the saved state was `STARTED`. But `onDestroy` saves `STOPPED` on every destruction, the system (EMUI) stopping the service included, so after such a stop every restart attempt found `STOPPED` and did nothing: messages arrived only once the app was opened again. The worker now decides from the settings — service mode chosen and allowed by the battery exemption, chat not stopped, onboarding complete, database usable.
+- **Watchdog every 15 minutes** (was every 3 hours; 15 minutes is WorkManager's minimum): if the service should be running and is not, it is started.
+- **Every process start brings the service up**, whatever started the process — alarm, worker, broadcast, boot, content provider — and re-schedules the watchdog.
+- A `START_STICKY` restart by the system (null intent) now marks the service as wanted again.
+- The restart alarm set when the app is swiped from recents now carries the `START` action (without it the restarted service ignored the request) and is a `getForegroundService` pending intent, as Android 8+ requires for a foreground service.
+- A refused `startForegroundService` (e.g. `ForegroundServiceStartNotAllowedException`) is caught and recorded instead of being lost.
+
+**Diagnostics**
+- **Service trace file**: process start, service create / start / destroy, task removal, every receiver and every watchdog run are logged with timestamps to `Android/data/shiroikuma.simplex/files/service-trace.log` (capped at 256 KB with one rotated copy), readable with `adb shell cat` — EMUI's logcat keeps only ERROR lines.
+
 ## 白い熊 SimpleX 7.1-beta.0+006 — 2026-09-14
 
 Built on upstream **v7.1.0-beta.0**.
