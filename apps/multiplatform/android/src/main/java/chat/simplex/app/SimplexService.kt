@@ -44,6 +44,7 @@ class SimplexService: Service() {
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     Log.d(TAG, "onStartCommand startId: $startId")
+    ServiceTrace.log(this, "service onStartCommand startId=$startId action=${intent?.action ?: "<null intent: sticky restart by system>"}")
     isServiceStarting = false
     if (intent != null) {
       val action = intent.action
@@ -54,6 +55,8 @@ class SimplexService: Service() {
       }
     } else {
       Log.d(TAG, "null intent. Probably restarted by the system.")
+      // fork: a START_STICKY restart must also mark the service as wanted again
+      startService()
     }
     ServiceCompat.startForeground(this, SIMPLEX_SERVICE_ID, createNotificationIfNeeded(), foregroundServiceType())
     return START_STICKY // to restart if killed
@@ -62,6 +65,7 @@ class SimplexService: Service() {
   override fun onCreate() {
     super.onCreate()
     Log.d(TAG, "Simplex service created")
+    ServiceTrace.log(this, "service onCreate stopAfterStart=$stopAfterStart")
     createNotificationIfNeeded()
     ServiceCompat.startForeground(this, SIMPLEX_SERVICE_ID, createNotificationIfNeeded(), foregroundServiceType())
     /**
@@ -84,6 +88,7 @@ class SimplexService: Service() {
 
   override fun onDestroy() {
     Log.d(TAG, "Simplex service destroyed")
+    ServiceTrace.log(this, "service onDestroy (shouldRun=${shouldServiceRun()}) -> ${if (shouldServiceRun()) "scheduling restart" else "not restarting"}")
     try {
       wakeLock?.let {
         while (it.isHeld) it.release() // release all, in case acquired more than once
@@ -98,7 +103,7 @@ class SimplexService: Service() {
     saveServiceState(this, ServiceState.STOPPED)
 
     // If notification service is enabled and battery optimization is disabled, restart the service
-    if (SimplexApp.context.allowToStartServiceAfterAppExit())
+    if (shouldServiceRun())
       sendBroadcast(Intent(this, AutoRestartReceiver::class.java))
     super.onDestroy()
   }
@@ -207,6 +212,7 @@ class SimplexService: Service() {
 
   // re-schedules the task when "Clear recent apps" is pressed
   override fun onTaskRemoved(rootIntent: Intent) {
+    ServiceTrace.log(this, "service onTaskRemoved chatStopped=${ChatController.appPrefs.chatStopped.get()} shouldRun=${shouldServiceRun()}")
     // Just to make sure that after restart of the app the user will need to re-authenticate
     AppLock.clearAuthState()
 
@@ -222,8 +228,13 @@ class SimplexService: Service() {
 
     val restartServiceIntent = Intent(applicationContext, SimplexService::class.java).also {
       it.setPackage(packageName)
+      it.action = Action.START.name // fork: without the action onStartCommand ignored the restart
     };
-    val restartServicePendingIntent: PendingIntent = PendingIntent.getService(this, 1, restartServiceIntent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE);
+    // fork: a foreground service must be started via getForegroundService on Android 8+
+    val restartServicePendingIntent: PendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+      PendingIntent.getForegroundService(this, 1, restartServiceIntent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
+    else
+      PendingIntent.getService(this, 1, restartServiceIntent, PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE);
     val alarmService: AlarmManager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager;
     alarmService.set(AlarmManager.ELAPSED_REALTIME, SystemClock.elapsedRealtime() + 1000, restartServicePendingIntent);
   }
@@ -232,6 +243,7 @@ class SimplexService: Service() {
   class StartReceiver: BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
       Log.d(TAG, "StartReceiver: onReceive called")
+      ServiceTrace.log(context, "StartReceiver ${intent.action}")
       scheduleStart(context)
     }
     companion object {
@@ -251,6 +263,7 @@ class SimplexService: Service() {
   class AutoRestartReceiver: BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
       Log.d(TAG, "AutoRestartReceiver: onReceive called")
+      ServiceTrace.log(context, "AutoRestartReceiver")
       scheduleStart(context)
     }
   }
@@ -259,6 +272,7 @@ class SimplexService: Service() {
   class AppUpdateReceiver: BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
       // If notification service is enabled and battery optimization is disabled, restart the service on app update
+      ServiceTrace.log(context, "AppUpdateReceiver ${intent.action}")
       if (SimplexApp.context.allowToStartServiceAfterAppExit()) {
         Log.d(TAG, "AppUpdateReceiver: onReceive called")
         scheduleStart(context)
@@ -285,7 +299,12 @@ class SimplexService: Service() {
         Log.d(TAG, "ServiceStartWorker: Failed, no application found (work ID: $id)")
         return Result.failure()
       }
-      if (getServiceState(context) == ServiceState.STARTED) {
+      // fork: upstream started only when the saved state was STARTED, but onDestroy saves STOPPED on
+      // every stop — including the system (EMUI) stopping it — so neither AutoRestartReceiver nor the
+      // periodic worker ever brought a killed service back. Decide from the settings instead.
+      val shouldRun = shouldServiceRun()
+      ServiceTrace.log(context, "ServiceStartWorker run: shouldRun=$shouldRun isServiceStarted=$isServiceStarted savedState=${getServiceState(context)}")
+      if (shouldRun && !isServiceStarted) {
         Log.d(TAG, "ServiceStartWorker: Starting foreground service (work ID: $id)")
         start()
       }
@@ -308,7 +327,7 @@ class SimplexService: Service() {
     const val NOTIFICATION_CHANNEL_NAME = "SimpleX Chat service"
     const val SIMPLEX_SERVICE_ID = 6789
     const val SERVICE_START_WORKER_VERSION = BuildConfig.VERSION_CODE
-    const val SERVICE_START_WORKER_INTERVAL_MINUTES = 3 * 60L
+    const val SERVICE_START_WORKER_INTERVAL_MINUTES = 15L // fork: watchdog, was 3 h (15 min is WorkManager's minimum)
     const val SERVICE_START_WORKER_WORK_NAME_PERIODIC = "SimplexAutoRestartWorkerPeriodic" // Do not change!
 
     private const val PASSPHRASE_NOTIFICATION_ID = 1535
@@ -321,6 +340,24 @@ class SimplexService: Service() {
     var isServiceStarting = false
     var isServiceStarted = false
     private var stopAfterStart = false
+
+    /**
+     * Fork: whether the background service is wanted right now — service mode chosen and allowed
+     * (battery exemption), chat not stopped by the user, onboarding done and the database usable
+     * (an unopened/erroneous database would only make the service stop itself again).
+     */
+    fun shouldServiceRun(): Boolean = try {
+      val prefs = ChatController.appPrefs
+      val dbStatus = ChatController.chatModel.chatDbStatus.value
+      SimplexApp.context.allowToStartServiceAfterAppExit() &&
+          !prefs.chatStopped.get() &&
+          prefs.newDatabaseInitialized.get() &&
+          prefs.onboardingStage.get() == chat.simplex.common.views.onboarding.OnboardingStage.OnboardingComplete &&
+          (dbStatus == null || dbStatus == DBMigrationResult.OK)
+    } catch (e: Throwable) {
+      Log.e(TAG, "shouldServiceRun: ${e.stackTraceToString()}")
+      false
+    }
 
     fun scheduleStart(context: Context) {
       Log.d(TAG, "Enqueuing work to start subscriber service")
@@ -346,6 +383,7 @@ class SimplexService: Service() {
     private suspend fun serviceAction(action: Action) {
       if (!NtfManager.areNotificationsEnabledInSystem()) {
         Log.d(TAG, "SimplexService serviceAction: ${action.name}. Notifications are not enabled in OS yet, not starting service")
+        ServiceTrace.log(androidAppContext, "serviceAction ${action.name} skipped: notifications disabled in OS")
         return
       }
       Log.d(TAG, "SimplexService serviceAction: ${action.name}")
@@ -353,7 +391,15 @@ class SimplexService: Service() {
         Intent(androidAppContext, SimplexService::class.java).also {
           it.action = action.name
           isServiceStarting = true
-          ContextCompat.startForegroundService(androidAppContext, it)
+          try {
+            ContextCompat.startForegroundService(androidAppContext, it)
+            ServiceTrace.log(androidAppContext, "startForegroundService(${action.name}) requested")
+          } catch (e: Throwable) {
+            // fork: e.g. ForegroundServiceStartNotAllowedException — record it instead of losing it
+            isServiceStarting = false
+            ServiceTrace.log(androidAppContext, "startForegroundService(${action.name}) FAILED: $e")
+            Log.e(TAG, "startForegroundService failed: ${e.stackTraceToString()}")
+          }
         }
       }
     }
