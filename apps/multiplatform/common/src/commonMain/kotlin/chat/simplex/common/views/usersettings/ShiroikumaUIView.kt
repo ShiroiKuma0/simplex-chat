@@ -33,7 +33,7 @@ import chat.simplex.common.views.chat.item.TickGlyph
 import chat.simplex.common.views.chat.item.TickIcon
 import chat.simplex.common.views.helpers.*
 import dev.icerock.moko.resources.compose.painterResource
-import chat.simplex.res.MR
+import chat.simplex.res.*
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
