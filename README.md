@@ -10,7 +10,7 @@ A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **ma
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.1-beta.0+006`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.1-beta.0+007`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -61,6 +61,12 @@ Stock lifts "raised" dark surfaces by mixing a few percent of the text color int
 ## 👆 Built for one hand on a big phone
 
 The **bottom** bar is 50% taller than stock — and only the bottom one — with its avatar and new-chat button scaled to match, so the tap targets are comfortable on a foldable. Every long-press shortcut into the UI page fires at 250 ms instead of the platform's sluggish default, without making message menus trigger by accident. **Private notes** is hidden from the chat list unless you switch it on, so the list holds only real conversations.
+
+---
+
+## 🔔 The background service comes back on its own
+
+Upstream's restart paths for the background service all funnel into one worker that only acted when a saved flag said the service was running — and the service writes "stopped" into that flag every time it is destroyed, the system killing it included. On EMUI, which stops services freely, that meant messages silently stopped arriving until the app was opened again. Here the service is restarted whenever it should be running: on every process start, by a 15-minute watchdog, after a sticky restart and after the task is swiped away. Every start, stop and restart attempt is written to a small trace file readable over adb, so a failure can be read after the fact.
 
 ---
 
