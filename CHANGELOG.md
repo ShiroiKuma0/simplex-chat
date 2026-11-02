@@ -7,6 +7,24 @@ SimpleX Chat release history unchanged below.
 
 # 白い熊 SimpleX — fork releases
 
+## 白い熊 SimpleX 7.1-beta.9+002 — 2026-11-02
+
+Built on upstream **v7.1.0-beta.9** (rebased from v7.1.0-beta.0: 424 upstream commits, among them upstream's supporter-badge store, the terminal chat layout for bot chats, reworked bubble insets and the moko-resources 0.27.1 upgrade). Every fork feature carries over, and so does the IME-commit-race fix — the bug is still present upstream.
+
+**Removed — donation and badge pitches**
+- **Chat list:** the blue “Support SimpleX / Get badge + better files” banner is gone, together with everything sharing its banner slot — the paid-badge renewal reminders and the crowdfunding “get stake” banner (also removed from the onboarding cards).
+- **Settings:** no “Support SimpleX” badge row, no “Support the project” section (contribute / rate / star on GitHub), no crowdfunding “Invest” section.
+- **Large-file alert:** states the maximum file size only — no “Support SimpleX” button, no “you need a supporter badge” wording.
+- **Links removed** from message info (“Support SimpleX to send larger files that stay available longer”), What's New (“get a badge”) and the alert shown when tapping a contact's badge (the factual note that the contact supports SimpleX stays).
+
+**Rebase onto the new upstream layout**
+- **Delivery ticks:** upstream's new tall status icon for sent/received is replaced by the fork's configurable tick (size, thickness, colour, glyph); the space reserved beside the message text scales with the tick size through upstream's new spacing helper.
+- **Message bubbles:** bubble background, border and per-direction text colour, and the sender name + avatar under received bubbles, re-applied onto upstream's rewritten bubble layout; the border is not drawn in upstream's new terminal layout, where bubbles have no background.
+- **Call icons:** the scaled (default 2×) call icons re-applied inside upstream's new meta wrapper.
+- The 白い熊 Simplex UI page adopts the wildcard resource import that moko-resources 0.27.1 requires.
+
+`7.1-beta.9+001` (the bare rebase, without the purge) was an intermediate build and was never published.
+
 ## 白い熊 SimpleX 7.1-beta.0+007 — 2026-11-02
 
 Built on upstream **v7.1.0-beta.0**.

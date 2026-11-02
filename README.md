@@ -10,7 +10,7 @@ A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **ma
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.1-beta.0+007`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.1-beta.9+002`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -70,6 +70,12 @@ Upstream's restart paths for the background service all funnel into one worker t
 
 ---
 
+## 🚫 No donation pitches
+
+Upstream 7.1 started selling supporter badges and pitching them across the app — a blue “Support SimpleX” bar on the chat list, a “Support SimpleX” button on the large-file alert, links in message info and What’s New, plus crowdfunding banners and Support / Invest sections in Settings. All of it is gone here: the chat list shows your chats and nothing else, and the large-file alert simply states the limit.
+
+---
+
 ## 🖤💛 Black-yellow identity
 
 The launcher icon is restyled into the fork's black/yellow scheme — the SimpleX hashmark traced in yellow on black, faithful to upstream's geometry — and the app presents as **白い熊 SimpleX**, so it's unmistakable next to the official install.
@@ -78,7 +84,7 @@ The launcher icon is restyled into the fork's black/yellow scheme — the Simple
 
 ## 📦 Tracks upstream fast, ships lean
 
-The fork rebases onto every new upstream release — **betas included** — usually days after it ships; it moved onto upstream **7.1-beta.0** the day that landed, and this build sits on it. APKs are `arm64-v8a` only and versioned `<upstream>+<build>`, the counter zero-padded to three digits (e.g. `7.1-beta.0+006`), with version codes that always sort above the corresponding upstream build. Since upstream split Android into `google` (Play Billing) and `foss` variants in 7.1, this is a **`foss`** build — no Play dependencies.
+The fork rebases onto every new upstream release — **betas included** — usually days after it ships; this build sits on upstream **7.1-beta.9**. APKs are `arm64-v8a` only and versioned `<upstream>+<build>`, the counter zero-padded to three digits (e.g. `7.1-beta.9+002`), with version codes that always sort above the corresponding upstream build. Since upstream split Android into `google` (Play Billing) and `foss` variants in 7.1, this is a **`foss`** build — no Play dependencies.
 
 ---
 
