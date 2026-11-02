@@ -84,6 +84,14 @@ class SimplexApp: Application(), LifecycleEventObserver {
       initChatControllerOnStart()
     }
     ProcessLifecycleOwner.get().lifecycle.addObserver(this@SimplexApp)
+    // fork: whatever started the process (alarm, worker, broadcast, boot, provider), bring the
+    // background service up in service mode and keep the watchdog worker scheduled.
+    val wantService = SimplexService.shouldServiceRun()
+    ServiceTrace.log(this, "process start: notificationsMode=${appPrefs.notificationsMode.get()} shouldRun=$wantService")
+    if (wantService) {
+      SimplexService.scheduleStart(this)
+      schedulePeriodicServiceRestartWorker()
+    }
   }
 
   override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
@@ -259,6 +267,7 @@ class SimplexApp: Application(), LifecycleEventObserver {
         // Prevents from showing "Enable notifications" alert when onboarding wasn't complete yet
         if (chatModel.controller.appPrefs.onboardingStage.get() == OnboardingStage.OnboardingComplete) {
           SimplexService.showBackgroundServiceNoticeIfNeeded()
+          ServiceTrace.log(this@SimplexApp, "chat initialized and started, mode=${appPrefs.notificationsMode.get()}")
           if (appPrefs.notificationsMode.get() == NotificationsMode.SERVICE)
             withBGApi {
               platform.androidServiceStart()
