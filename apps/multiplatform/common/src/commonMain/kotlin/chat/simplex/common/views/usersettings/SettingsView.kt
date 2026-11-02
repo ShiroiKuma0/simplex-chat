@@ -111,24 +111,6 @@ fun SettingsLayout(
     }
     SectionDividerSpaced()
 
-    val (badgeLabel, badgeBenefits) = when (currentShownBadge()?.badgeType) {
-      null -> MR.strings.badges_support_simplex_title to MR.strings.v7_1_supporter_badge_descr
-      is BadgeType.Legend -> MR.strings.badges_your_legend_badge to MR.strings.badges_legend_benefits
-      is BadgeType.Supporter, is BadgeType.Investor, is BadgeType.Unknown -> MR.strings.badges_your_badge to MR.strings.badges_supporter_benefits
-    }
-    SectionView {
-      // Direct showModal (no settings / cardScreen flags) — settings-style card chrome would render
-      // a gray top bar / back button that badges views don't want (they have their own inline titles).
-      SectionItemView(click = { ModalManager.start.showCustomModal(id = ModalViewId.BADGES) { close -> BadgesView(ModalManager.start, close) } }) {
-        val badgeType = chatModel.currentUser.value?.profile?.localBadge?.badge?.badgeType ?: BadgeType.Supporter
-        Image(painterResource(badgeImage(badgeType)), stringResource(badgeLabel), Modifier.size(24.dp))
-        TextIconSpaced()
-        Text(stringResource(badgeLabel))
-      }
-    }
-    SectionTextFooter(stringResource(badgeBenefits))
-    SectionDividerSpaced()
-
     SectionView(stringResource(MR.strings.advanced_settings)) {
       SettingsActionItem(painterResource(MR.images.ic_wifi_tethering), stringResource(MR.strings.network_and_servers), showCustomModal { _, close -> NetworkAndServersView(close) }, disabled = stopped)
       if (appPlatform == AppPlatform.ANDROID) {
@@ -139,16 +121,6 @@ fun SettingsLayout(
       AppVersionItem(showVersion)
     }
 
-    if (crowdfundingAvailable()) {
-      SectionDividerSpaced()
-      SectionView(stringResource(MR.strings.invest_settings_title)) {
-        SettingsActionItem(
-          painterResource(MR.images.ic_redeem),
-          stringResource(MR.strings.v7_0_crowdfunding),
-          { ModalManager.start.showModal(cardScreen = true) { GetStakeView() } }
-        )
-      }
-    }
     SectionBottomSpacer()
   }
 }
@@ -178,17 +150,6 @@ fun HelpAndSupportView(
         SettingsActionItem(painterResource(MR.images.ic_tag), stringResource(MR.strings.chat_with_the_founder), { uriHandler.openVerifiedSimplexUri(simplexTeamUri) }, textColor = MaterialTheme.colors.primary, disabled = stopped)
       }
       SettingsActionItem(painterResource(MR.images.ic_mail), stringResource(MR.strings.send_us_an_email), { uriHandler.openUriCatching("mailto:chat@simplex.chat") }, textColor = MaterialTheme.colors.primary)
-    }
-    SectionDividerSpaced()
-
-    SectionView(stringResource(MR.strings.settings_section_title_support_project)) {
-      if (!platform.androidIsPlayStoreBuild) {
-        ContributeItem(uriHandler)
-      }
-      if (appPlatform.isAndroid) {
-        RateAppItem(uriHandler)
-      }
-      StarOnGithubItem(uriHandler)
     }
     SectionBottomSpacer()
   }

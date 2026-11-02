@@ -1116,61 +1116,7 @@ private fun BoxScope.ChatList(searchText: MutableState<TextFieldValue>, listStat
         ToggleChatListCard()
       }
     }
-    // one slot: an alert about a badge the user paid for outranks the pitch to get one
-    val alert = bannerBadgeAlert()
-    if (alert != null) {
-      item {
-        SideEffect { chatModel.chatListBanner = ChatListBanner.BadgeAlert }
-        Box(Modifier.zIndex(1f).padding(16.dp)) {
-          when (alert.kind) {
-            is BadgeAlertKind.SupportEnded ->
-              BadgeAlertBanner(stringResource(MR.strings.badges_support_ended), String.format(stringResource(MR.strings.badges_support_ended_on), alert.dateText))
-            is BadgeAlertKind.IssueFailed ->
-              BadgeAlertBanner(stringResource(MR.strings.badges_renewal_failed), renewalFailure(), warning = true)
-            is BadgeAlertKind.SubscriptionEnded ->
-              BadgeAlertBanner(stringResource(MR.strings.badges_subscription_ended_title), String.format(stringResource(MR.strings.badges_subscription_ended_on), alert.dateText))
-            is BadgeAlertKind.PaymentIssue ->
-              BadgeAlertBanner(stringResource(MR.strings.badges_payment_problem_title), stringResource(MR.strings.badges_payment_problem_subtitle), warning = true)
-            is BadgeAlertKind.SubscriptionCancelled ->
-              BadgeAlertBanner(stringResource(MR.strings.badges_subscription_cancelled_title), String.format(stringResource(MR.strings.badges_stays_until), alert.dateText))
-            is BadgeAlertKind.RenewalApproaching -> {
-              val price = renewalPrice()
-              if (price != null) {
-                BadgeAlertBanner(stringResource(MR.strings.badges_renews_soon), String.format(stringResource(MR.strings.badges_renews_on_for), alert.dateText, price))
-              } else {
-                BadgeAlertBanner(stringResource(MR.strings.badges_renews_soon), String.format(stringResource(MR.strings.badges_renews_on), alert.dateText))
-              }
-            }
-            is BadgeAlertKind.PrepaidEnding, is BadgeAlertKind.Unknown -> {}
-          }
-        }
-      }
-    } else if (chatModel.bannerSlotFree(ChatListBanner.BadgePitch) && !supporterBannerShown.value && noShownBadge() && chatModel.chats.value.size > 3) {
-      item {
-        SideEffect { chatModel.chatListBanner = ChatListBanner.BadgePitch }
-        Box(Modifier.zIndex(1f).padding(16.dp)) {
-          SupportSimpleXBanner(
-            showDismiss = supporterBannerTapped.value,
-            onTap = {
-              appPrefs.supporterBannerTapped.set(true)
-              ModalManager.start.showCustomModal(id = ModalViewId.BADGES) { close -> BadgesView(ModalManager.start, close) }
-            },
-            onDismiss = ::showSupportSimpleXDismissAlert
-          )
-        }
-      }
-    } else if (chatModel.bannerSlotFree(ChatListBanner.GetStake) && crowdfunding && !getStakeBannerDismissed.value) {
-      item {
-        SideEffect { chatModel.chatListBanner = ChatListBanner.GetStake }
-        Box(Modifier.zIndex(1f).padding(16.dp)) {
-          GetStakeBanner(
-            showDismiss = getStakeBannerTapped.value && chatModel.chats.value.isNotEmpty(),
-            onTap = { openGetStake(ModalManager.start) },
-            onDismiss = { appPrefs.getStakeBannerDismissed.set(true) }
-          )
-        }
-      }
-    }
+    // downstream (shiroikuma): no "Support SimpleX" / badge / crowdfunding banners on the chat list
     itemsIndexed(chats, key = { _, chat -> chat.remoteHostId to chat.id }) { index, chat ->
       val nextChatSelected = remember(chat.id, chats) { derivedStateOf {
         chatModel.chatId.value != null && chats.getOrNull(index + 1)?.id == chatModel.chatId.value

@@ -326,17 +326,8 @@ private fun isWebmUri(uri: URI): Boolean = getFileName(uri)?.lowercase()?.endsWi
 fun showLargeFileAlert(fileSize: Long, incognito: Boolean, senderProfile: LocalProfile?) {
   val title = generalGetString(MR.strings.large_file)
   val text = largeFileMessage(fileSize, incognito, expiredBadgeReason(fileSize, senderProfile))
-  if (!incognito && fileSize <= MAX_FILE_SIZE_XFTP_LEGEND && noShownBadge()) {
-    AlertManager.shared.showAlertDialog(
-      title = title,
-      text = text,
-      confirmText = generalGetString(MR.strings.ok),
-      dismissText = generalGetString(MR.strings.badges_support_simplex_title),
-      onDismiss = { if (!appPlatform.isDesktop || !ModalManager.end.hasModalOpen(ModalViewId.BADGES)) openBadgesView() }
-    )
-  } else {
-    AlertManager.shared.showAlertMsg(title, text)
-  }
+  // downstream (shiroikuma): no "Support SimpleX" button on the large-file alert
+  AlertManager.shared.showAlertMsg(title, text)
 }
 
 fun MutableState<ComposeState>.processPickedFile(uri: URI?, text: String?) {

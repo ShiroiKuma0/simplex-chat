@@ -494,15 +494,9 @@ fun badgeActiveForSend(badge: LocalBadge): Boolean =
 fun largeFileMessage(fileSize: Long, incognito: Boolean = false, badgeIssue: String = ""): String =
   if (incognito) {
     String.format(generalGetString(MR.strings.large_file_incognito), formatBytes(MAX_FILE_SIZE_XFTP))
-  } else if (fileSize > MAX_FILE_SIZE_XFTP_LEGEND) {
-    String.format(generalGetString(MR.strings.max_file_size_with_badge), formatBytes(MAX_FILE_SIZE_XFTP_LEGEND), generalGetString(MR.strings.legend_badge))
   } else {
-    val supporter = fileSize <= MAX_FILE_SIZE_XFTP_SUPPORTER
-    val message = String.format(
-      generalGetString(MR.strings.large_file_requires_badge),
-      generalGetString(if (supporter) MR.strings.supporter_badge else MR.strings.legend_badge),
-      formatBytes(if (supporter) MAX_FILE_SIZE_XFTP else MAX_FILE_SIZE_XFTP_SUPPORTER)
-    )
+    // downstream (shiroikuma): state the limit, without the pitch to buy a badge for larger files
+    val message = String.format(generalGetString(MR.strings.maximum_supported_file_size), formatBytes(MAX_FILE_SIZE_XFTP))
     if (badgeIssue.isEmpty()) message else message + " " + badgeIssue
   }
 

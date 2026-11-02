@@ -260,17 +260,8 @@ fun showBadgeInfoAlert(name: String, badge: LocalBadge, uriHandler: UriHandler) 
           String.format(generalGetString(MR.strings.badge_supported_simplex), name, localDate(badge.badge.badgeExpiry))
         else
           String.format(generalGetString(MR.strings.badge_supports_simplex), name)
-      if (noShownBadge()) {
-        AlertManager.shared.showAlertDialog(
-          title = title,
-          text = supports,
-          confirmText = generalGetString(MR.strings.ok),
-          dismissText = generalGetString(MR.strings.badges_support_simplex_title),
-          onDismiss = { if (!appPlatform.isDesktop || !ModalManager.end.hasModalOpen(ModalViewId.BADGES)) openBadgesView() }
-        )
-      } else {
-        AlertManager.shared.showAlertMsg(title = title, text = supports)
-      }
+      // downstream (shiroikuma): no "Support SimpleX" button
+      AlertManager.shared.showAlertMsg(title = title, text = supports)
     }
   }
 }

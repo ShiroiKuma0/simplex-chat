@@ -1048,21 +1048,6 @@ private fun SupporterBadgeWhatsNew(modalManager: ModalManager) {
     )
     if (currentShownBadge() != null) {
       Text(stringResource(MR.strings.v7_1_supporter_badge_have), Modifier.padding(top = 6.dp), fontSize = 15.sp)
-    } else if (noShownBadge()) {
-      Text(
-        stringResource(MR.strings.v7_1_supporter_badge_get),
-        color = MaterialTheme.colors.primary,
-        fontSize = 15.sp,
-        modifier = Modifier
-          .padding(top = 6.dp)
-          .pointerHoverIcon(PointerIcon.Hand)
-          .clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null
-          ) {
-            modalManager.showCustomModal(id = ModalViewId.BADGES) { close -> BadgesView(modalManager, close) }
-          }
-      )
     }
   }
 }

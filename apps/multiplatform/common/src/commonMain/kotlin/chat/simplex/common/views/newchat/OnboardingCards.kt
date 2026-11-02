@@ -430,7 +430,8 @@ fun ConnectOnboardingView() {
   }
 
   val getStakeBannerDismissed = remember { appPrefs.getStakeBannerDismissed.state }
-  val showGetStakeBanner = chatModel.bannerSlotFree(ChatListBanner.GetStake) && crowdfundingAvailable() && !getStakeBannerDismissed.value
+  // downstream (shiroikuma): never show the crowdfunding "get stake" pitch
+  val showGetStakeBanner = false && chatModel.bannerSlotFree(ChatListBanner.GetStake) && crowdfundingAvailable() && !getStakeBannerDismissed.value
   // on desktop the pages span the window, but the banner keeps the width it has in the chat list
   val bannerMaxWidth = if (appPlatform.isDesktop) DEFAULT_START_MODAL_WIDTH * fontSizeSqrtMultiplier else Dp.Unspecified
   val content = @Composable {
