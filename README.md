@@ -10,7 +10,7 @@ A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **ma
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.1-beta.9+002`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.1-beta.9+007`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -48,7 +48,7 @@ A running export can also be **stopped from outside**, and stopping it means sto
 
 ## ✔️ Delivery ticks, down to the glyph
 
-Scale the sent/delivered indicators from 1× to 15×, set their stroke thickness, give each its own color — and now pick **what shape each one is**: single, double or triple tick, dot, tick in a circle, up arrow, clock, exclamation mark, or hidden. The picker previews every option at your configured size, color and thickness, drawn by the same code the chat footer uses, so what you choose is exactly what you get. Delivered defaults to a **dot** rather than a second tick — shape, not stroke count, tells the two rungs apart — with a dot-size multiplier (1–5 in tenths) to match its weight to a tick. Everything is redrawn as true vector strokes on a Canvas, so it stays crisp at any size instead of plateauing at the stock icon's intrinsic limit.
+Scale the sent/delivered indicators from 1× to 15×, set their stroke thickness, give each its own color — and now pick **what shape each one is**: single, double or triple tick, dot, tick in a circle, up arrow, clock, exclamation mark, or hidden. The picker previews every option at your configured size, color and thickness, drawn by the same code the chat footer uses, so what you choose is exactly what you get. Delivered defaults to a **dot** rather than a second tick — shape, not stroke count, tells the two rungs apart — with a dot-size multiplier (1–5 in tenths) to match its weight to a tick. Everything is redrawn as true vector strokes on a Canvas, so it stays crisp at any size instead of plateauing at the stock icon's intrinsic limit. The **chat list** shows the same tick beside the time whenever the last message is yours. A yellow ↗ or grey ↙ before the preview says who wrote last, so a whole chat's state reads at a glance.
 
 ---
 
@@ -66,7 +66,19 @@ The **bottom** bar is 50% taller than stock — and only the bottom one — with
 
 ## 🔔 The background service comes back on its own
 
-Upstream's restart paths for the background service all funnel into one worker that only acted when a saved flag said the service was running — and the service writes "stopped" into that flag every time it is destroyed, the system killing it included. On EMUI, which stops services freely, that meant messages silently stopped arriving until the app was opened again. Here the service is restarted whenever it should be running: on every process start, by a 15-minute watchdog, after a sticky restart and after the task is swiped away. Every start, stop and restart attempt is written to a small trace file readable over adb, so a failure can be read after the fact.
+Upstream's restart paths for the background service all funnel into one worker that only acted when a saved flag said the service was running — and the service writes "stopped" into that flag every time it is destroyed, the system killing it included. On EMUI, which stops services freely, that meant messages silently stopped arriving until the app was opened again. Here the service is restarted whenever it should be running: on every process start, by a 15-minute watchdog, after a sticky restart and after the task is swiped away. EMUI sometimes goes further, killing the app outright and dropping its scheduled jobs. For that, an exported **keep-alive broadcast** lets a separate watchdog app wake it. The broadcast only starts the service when your own settings want it running.
+
+---
+
+## 🩺 Diagnostics you switch on when something is wrong
+
+The UI page has a **Diagnostics** section that records four things, each behind its own switch and all off by default:
+- the service life-cycle, including how the previous process ended — or that Android has no record of it;
+- device and power state;
+- connectivity and relay subscriptions;
+- every received message and call, with how late it arrived and why a notification was or wasn't shown.
+
+Files are plain `.txt`, one per kind per day, because EMUI's nightly clean-up deletes `.log` files. A recording notification offers **Mark** and **Turn all off**. Export, Share, Purge and a keep-for-N-days slider sit at the end of the section.
 
 ---
 

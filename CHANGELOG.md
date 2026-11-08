@@ -7,6 +7,45 @@ SimpleX Chat release history unchanged below.
 
 # 白い熊 SimpleX — fork releases
 
+## 白い熊 SimpleX 7.1-beta.9+007 — 2026-11-08
+
+Built on upstream **v7.1.0-beta.9**.
+
+**Fixes & behavior — staying alive on EMUI**
+- **Keep-alive door for an external watchdog.** EMUI was found killing the app with no exit record and dropping its WorkManager job, so the in-app 15-minute watchdog never ran (the app lay dead from 08:51 to 14:12, missing a call and a message). A new exported broadcast, `shiroikuma.simplex.action.KEEP_ALIVE`, lets a watchdog app such as 白い熊 自由作業盤 wake it.
+  - It starts the background service only when the app's own settings want it running.
+  - It has no permission and no token.
+  - It answers `OFF`, `ALIVE`, `STARTED` or `ERROR:<reason>`, both as the ordered-broadcast result and to the caller's `reply_action` in `reply_package` with `reply_id`.
+
+**Diagnostics — a new section on the 白い熊 Simplex UI page**
+- **Four recordings, each behind its own switch and all off by default:**
+  - **Service life-cycle:** process and service start and stop, every restart path, and each previous process's exit record — or the lack of one, which is itself the evidence of an EMUI kill.
+  - **Device and power:** standby bucket, battery-optimisation exemption, background restriction, Doze, power save, and screen on/off.
+  - **Connectivity and relays:** network changes and losses, whether the core accepted the new network, and relay subscription status.
+  - **Messages and calls:** every received message and call with how late it arrived, and why a notification was or was not shown.
+- **Files:** one `.txt` per kind per day in `Android/data/shiroikuma.simplex/files/diag/`, capped at 16 MB a day. They are never `.log`, because EMUI's nightly clean-up deletes `.log` files under `Android/data`. The old always-on `service-trace.log` is moved in on the first start.
+- **Recording notification:** an ongoing notification shows while anything records. Its **Mark** action writes a numbered marker line; **Turn all off** stops every recording.
+- **Recorded data:**
+  - a stored summary: files, size and time span;
+  - **Keep for** 0–30 days, where 0 keeps everything;
+  - **Export** into a dated subdirectory of a directory you pick, first offered at `/sdcard/tmp`;
+  - **Share** to another app;
+  - **Purge**, behind a warning that lists every kind and day it will delete.
+
+**Chat list**
+- **Who wrote last:** the preview begins with a yellow **↗** when the last message is yours and a grey **↙** when it was received. Chat events carry no arrow.
+- **Delivery status at a glance:** when the last message is yours, its tick sits beside the time. It is the same glyph, size, thickness and colours as in the bubble, drawn by the same code.
+
+**UI**
+- Switches on the 白い熊 Simplex UI page are drawn in the accent colour when on, instead of Material grey.
+- **Every row you tap to do something is now a full-width outlined pill**, with its explanation beneath:
+  - **›** marks a row that opens something.
+  - A thick frame and bold label mark the main action of a section.
+  - The pills are Reset to default, Add font, and Diagnostics Export, Share and Purge (Purge in red).
+  - Regenerate (automation token) became a small pill instead of bare text.
+
+`7.1-beta.9+003` to `+006` were intermediate builds and were never published.
+
 ## 白い熊 SimpleX 7.1-beta.9+002 — 2026-11-02
 
 Built on upstream **v7.1.0-beta.9** (rebased from v7.1.0-beta.0: 424 upstream commits, among them upstream's supporter-badge store, the terminal chat layout for bot chats, reworked bubble insets and the moko-resources 0.27.1 upgrade). Every fork feature carries over, and so does the IME-commit-race fix — the bug is still present upstream.
