@@ -1,7 +1,6 @@
 package chat.simplex.common.views.usersettings
 
 import SectionBottomSpacer
-import SectionItemView
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -38,6 +37,8 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -125,6 +126,9 @@ fun ShiroikumaUIView() {
     UIColorRow(1, "Delivered tick's color", appPrefs.messageTickReceivedColor, AppPreferences.DEFAULT_SHIROIKUMA_YELLOW)
     TickGlyphRow(1, "Delivered glyph", appPrefs.messageTickDeliveredGlyph, TickGlyph.DOT, appPrefs.messageTickReceivedColor, AppPreferences.DEFAULT_SHIROIKUMA_YELLOW)
 
+    // ── Diagnostics ────────────────────────────────────────────
+    DiagnosticsSection()
+
     SectionBottomSpacer()
   }
 }
@@ -206,7 +210,7 @@ private fun AutomationSwitchRow(level: Int) {
           color = MaterialTheme.colors.secondary
         )
       }
-      Switch(checked = enabled, onCheckedChange = { appPrefs.automationEnabled.set(it) })
+      DefaultSwitch(checked = enabled, onCheckedChange = { appPrefs.automationEnabled.set(it) })
     }
     // writing into the shared backup directory an automation task names needs All-Files-Access
     val allFiles = if (enabled) hasAllFilesAccess() else null
@@ -246,7 +250,7 @@ private fun AutomationRequireTokenRow(level: Int) {
         color = MaterialTheme.colors.secondary
       )
     }
-    Switch(checked = require, onCheckedChange = { appPrefs.automationRequireToken.set(it) })
+    DefaultSwitch(checked = require, onCheckedChange = { appPrefs.automationRequireToken.set(it) })
   }
 }
 
@@ -277,25 +281,19 @@ private fun AutomationTokenRow(level: Int) {
         overflow = TextOverflow.Ellipsis
       )
     }
-    Text(
-      "Regenerate",
-      Modifier
-        .clickable {
-          AlertManager.shared.showAlertDialog(
-            title = "Regenerate token?",
-            text = "The current token stops working immediately. Every task that has it pasted — 自由作業盤's 保存復元の設定 — must be updated with the new one.",
-            confirmText = "Regenerate",
-            onConfirm = {
-              token.value = AutomationAuth.regenerate()
-              showToast("New automation token generated")
-            },
-            destructive = true,
-          )
-        }
-        .padding(start = 10.dp, top = 4.dp, bottom = 4.dp),
-      fontSize = 13.sp,
-      color = MaterialTheme.colors.primary
-    )
+    Spacer(Modifier.width(10.dp))
+    DiagPill("Regenerate") {
+      AlertManager.shared.showAlertDialog(
+        title = "Regenerate token?",
+        text = "The current token stops working immediately. Every task that has it pasted — 自由作業盤's 保存復元の設定 — must be updated with the new one.",
+        confirmText = "Regenerate",
+        onConfirm = {
+          token.value = AutomationAuth.regenerate()
+          showToast("New automation token generated")
+        },
+        destructive = true,
+      )
+    }
   }
 }
 
@@ -350,7 +348,7 @@ private fun UISwitchRow(level: Int, label: String, pref: SharedPreference<Boolea
   val value = remember { pref.state }.value
   UIRow(level, click = { pref.set(!value) }) {
     Text(label, Modifier.weight(1f), fontSize = 15.sp)
-    Switch(checked = value, onCheckedChange = { pref.set(it) })
+    DefaultSwitch(checked = value, onCheckedChange = { pref.set(it) })
   }
 }
 
@@ -448,9 +446,7 @@ fun RgbaColorEditor(
     ChannelSlider("B", blue) { blue = it; onColorChange(Color(red, green, blue, alpha)) }
     ChannelSlider("A", alpha) { alpha = it; onColorChange(Color(red, green, blue, alpha)) }
 
-    SectionItemView({ apply(defaultColor); onReset() }) {
-      Text("Reset to default", color = MaterialTheme.colors.primary)
-    }
+    ActionPill(0, "Reset to default", "Puts this colour back to the app's default.") { apply(defaultColor); onReset() }
 
     // record the final color as a one-click preset when the editor closes
     val latest = rememberUpdatedState(current)
@@ -536,8 +532,8 @@ fun FontPickerView() {
         fonts = installedFonts()
       }
     }
-    SectionItemView({ withLongRunningApi { importFontLauncher.launch("*/*") } }) {
-      Text("Add font (.ttf / .otf)…", color = MaterialTheme.colors.primary)
+    ActionPill(0, "Add font (.ttf / .otf)…", "Copies a font file into the app and adds it to this list.", main = true, opens = true) {
+      withLongRunningApi { importFontLauncher.launch("*/*") }
     }
     SectionBottomSpacer()
   }
@@ -732,6 +728,203 @@ private fun showTickGlyphPicker(
         }
       }
       SectionBottomSpacer()
+    }
+  }
+}
+
+// ───────────────────────── Diagnostics ─────────────────────────
+// downstream (shiroikuma): the Diagnostics section every 白い熊 app carries (global skill
+// “diagnostics-ui-settings”) — every log behind its own switch, all off by default; files in
+// “Android/data/shiroikuma.simplex/files/diag/”, export, share, purge, keep-N-days.
+
+@Composable
+private fun DiagnosticsSection() {
+  UIHeading("Diagnostics")
+  Text(
+    "Nothing is recorded until a switch below is on. Files: Android/data/shiroikuma.simplex/files/diag/, one per kind per day.",
+    Modifier.padding(start = BASE_PADDING + INDENT_STEP, end = BASE_PADDING, bottom = 4.dp),
+    fontSize = 13.sp,
+    color = MaterialTheme.colors.secondary
+  )
+  val refresh = remember { mutableStateOf(0) }
+  UISubheading("Background service", 1)
+  DiagSwitchRow(2, ShiroikumaDiag.Kind.SERVICE, refresh)
+  DiagSwitchRow(2, ShiroikumaDiag.Kind.DEVICE, refresh)
+  UISubheading("Network", 1)
+  DiagSwitchRow(2, ShiroikumaDiag.Kind.NETWORK, refresh)
+  UISubheading("Messages and calls", 1)
+  DiagSwitchRow(2, ShiroikumaDiag.Kind.MESSAGES, refresh)
+  UISubheading("Recorded data", 1)
+  DiagRecordedData(2, refresh)
+}
+
+/** Bold label, bold-monospace tag line, dim-gold description, a thin dim-gold rule on the left. */
+@Composable
+private fun DiagSwitchRow(level: Int, kind: ShiroikumaDiag.Kind, refresh: MutableState<Int>) {
+  val on = remember { kind.pref.state }.value
+  val toggle = { v: Boolean -> ShiroikumaDiag.set(kind, v); refresh.value++ }
+  Row(
+    Modifier
+      .fillMaxWidth()
+      .clickable { toggle(!on) }
+      .padding(start = BASE_PADDING + INDENT_STEP * level, end = BASE_PADDING, top = 3.dp, bottom = 3.dp)
+      .height(IntrinsicSize.Min),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Box(Modifier.width(2.dp).fillMaxHeight().background(MaterialTheme.colors.secondary))
+    Spacer(Modifier.width(10.dp))
+    Column(Modifier.weight(1f)) {
+      Text(kind.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colors.primary)
+      Row {
+        Text(kind.tag, fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, color = MaterialTheme.colors.primary)
+        Text("  ·  _<day>.txt", fontSize = 13.sp, color = MaterialTheme.colors.secondary)
+      }
+      Text(kind.description, fontSize = 13.sp, color = MaterialTheme.colors.secondary)
+    }
+    DefaultSwitch(checked = on, onCheckedChange = { toggle(it) })
+  }
+}
+
+private fun diagSize(bytes: Long): String = when {
+  bytes >= 1024 * 1024 -> "%.1f MB".format(bytes / 1048576.0)
+  bytes >= 1024 -> "%.0f KB".format(bytes / 1024.0)
+  else -> "$bytes B"
+}
+
+private fun diagWhen(t: Long, pattern: String) = java.text.SimpleDateFormat(pattern, java.util.Locale.US).format(java.util.Date(t))
+
+@Composable
+private fun DiagRecordedData(level: Int, refresh: MutableState<Int>) {
+  val summary = remember { mutableStateOf<ShiroikumaDiag.Summary?>(null) }
+  val busy = remember { mutableStateOf(false) }
+  LaunchedEffect(refresh.value) {
+    summary.value = withContext(Dispatchers.IO) { ShiroikumaDiag.summarize() }
+  }
+  // retention is applied on leaving the page (and at every start)
+  DisposableEffect(Unit) { onDispose { Thread { ShiroikumaDiag.cleanup() }.start() } }
+
+  val s = summary.value
+  UIRow(level) {
+    Column(Modifier.weight(1f).padding(vertical = 2.dp)) {
+      Text("Stored", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colors.primary)
+      Text(
+        when {
+          s == null -> "Counting…"
+          s.files == 0 -> "Nothing recorded."
+          else -> "${s.files} files, ${diagSize(s.bytes)}, ${diagWhen(s.first, "yyyy-MM-dd HH:mm")} – ${diagWhen(s.last, "yyyy-MM-dd HH:mm")}."
+        },
+        fontSize = 13.sp,
+        color = MaterialTheme.colors.secondary
+      )
+    }
+  }
+
+  val keep = remember { appPrefs.diagKeepDays.state }.value
+  UIRow(level) {
+    Text("Keep for", Modifier.weight(0.4f), fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colors.primary)
+    Slider(
+      keep.toFloat(),
+      onValueChange = { appPrefs.diagKeepDays.set(it.roundToInt()) },
+      Modifier.weight(0.6f).padding(horizontal = 6.dp),
+      valueRange = 0f..30f,
+      steps = 29,
+      colors = SliderDefaults.colors(activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent)
+    )
+    Text(if (keep == 0) "all" else "$keep d", Modifier.widthIn(min = 48.dp), fontSize = 13.sp, textAlign = TextAlign.End)
+  }
+
+  val exportLauncher = rememberDirectoryChooserLauncher { picked ->
+    if (picked == null) return@rememberDirectoryChooserLauncher
+    busy.value = true
+    withBGApi {
+      val msg = try { "Exported to ${ShiroikumaDiag.export(picked)}" } catch (e: Throwable) { "Export failed: ${e.message}" }
+      withContext(Dispatchers.Main) {
+        busy.value = false
+        showToast(msg)
+      }
+    }
+  }
+  val empty = s == null || s.files == 0
+  val enabled = !empty && !busy.value
+  ActionPill(level, "Export", "Copies every file into a new dated subdirectory of a directory you pick.", main = true, opens = true, enabled = enabled) {
+    withLongRunningApi { exportLauncher.launch(diagExportInitialDir()) }
+  }
+  ActionPill(level, "Share", "Sends every file to another app.", opens = true, enabled = enabled) { diagShare(ShiroikumaDiag.files()) }
+  ActionPill(level, "Purge", "Deletes every recorded file forever, after a confirmation that lists them.", color = WARN_COLOR, enabled = enabled) {
+    val sum = s ?: return@ActionPill
+    AlertManager.shared.showAlertDialog(
+      title = "Delete diagnostics forever?",
+      text = diagPurgeText(sum),
+      confirmText = "Delete forever",
+      onConfirm = {
+        val n = ShiroikumaDiag.purge()
+        refresh.value++
+        showToast("Deleted $n files")
+      },
+      destructive = true,
+      parseHtml = false,
+    )
+  }
+}
+
+private fun diagPurgeText(s: ShiroikumaDiag.Summary): String = buildString {
+  append("${s.files} files, ${diagSize(s.bytes)}, will be deleted forever:\n")
+  s.kinds.forEach { (kind, k) -> append("\n• $kind: ${k[0]} files, ${diagSize(k[1])}") }
+  append("\n")
+  s.days.forEach { (day, span) -> append("\n• $day  ${diagWhen(span[0], "HH:mm")} – ${diagWhen(span[1], "HH:mm")}") }
+}
+
+/** The theme's pill: never filled; the main action has a 3 dp frame and bold text, the others 1.25 dp. */
+@Composable
+private fun DiagPill(label: String, main: Boolean = false, color: Color = MaterialTheme.colors.primary, enabled: Boolean = true, onClick: () -> Unit) {
+  val shape = RoundedCornerShape(50)
+  val c = if (enabled) color else color.copy(alpha = 0.38f)
+  Box(
+    Modifier
+      .clip(shape)
+      .background(MaterialTheme.colors.background)
+      .border(if (main) 3.dp else 1.25.dp, c, shape)
+      .clickable(enabled = enabled, onClick = onClick)
+      .padding(horizontal = 18.dp, vertical = 6.dp)
+  ) {
+    Text(label, color = c, fontSize = 14.sp, fontWeight = if (main) FontWeight.Bold else FontWeight.Normal, maxLines = 1)
+  }
+}
+
+/**
+ * A settings row that does something when tapped (black-yellow-theme, 2026-11-07): a full-width
+ * outlined pill holding the label — › when it opens something, 3 dp + bold when it is the main
+ * action of its section — and its explanation beneath in dim gold, aligned with the label.
+ */
+@Composable
+private fun ActionPill(
+  level: Int,
+  label: String,
+  description: String? = null,
+  main: Boolean = false,
+  opens: Boolean = false,
+  color: Color = MaterialTheme.colors.primary,
+  enabled: Boolean = true,
+  onClick: () -> Unit
+) {
+  val shape = RoundedCornerShape(50)
+  val c = if (enabled) color else color.copy(alpha = 0.38f)
+  Column(Modifier.fillMaxWidth().padding(start = BASE_PADDING + INDENT_STEP * level, end = BASE_PADDING, top = 4.dp, bottom = 2.dp)) {
+    Row(
+      Modifier
+        .fillMaxWidth()
+        .clip(shape)
+        .background(MaterialTheme.colors.background)
+        .border(if (main) 3.dp else 1.25.dp, c, shape)
+        .clickable(enabled = enabled, onClick = onClick)
+        .padding(horizontal = 18.dp, vertical = 7.dp),
+      verticalAlignment = Alignment.CenterVertically
+    ) {
+      Text(label, Modifier.weight(1f), color = c, fontSize = 15.sp, fontWeight = if (main) FontWeight.Bold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)
+      if (opens) Text("›", color = c, fontSize = 20.sp, fontWeight = if (main) FontWeight.Bold else FontWeight.Normal)
+    }
+    if (description != null) {
+      Text(description, Modifier.padding(start = 18.dp, end = 18.dp, top = 2.dp), fontSize = 13.sp, color = MaterialTheme.colors.secondary)
     }
   }
 }
