@@ -46,6 +46,11 @@ abstract class NtfManager {
               chatModel.remoteHostId() != rhId)
     ) {
       displayNotification(user = user, chatId = cInfo.id, displayName = cInfo.displayName, msgText = hideSecrets(cItem, cInfo.isChannel))
+    } else if (!cItem.chatDir.sent) {
+      ShiroikumaDiag.log(ShiroikumaDiag.Kind.MESSAGES) {
+        "notification for chat=${cInfo.id} item=${cItem.id} not shown: showNotification=${cItem.showNotification} " +
+          "ntfsEnabled=${cInfo.ntfsEnabled(cItem)} chatOpen=${chatModel.chatId.value == cInfo.id}"
+      }
     }
   }
 

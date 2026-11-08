@@ -100,7 +100,10 @@ object NtfManager {
   }
 
   fun displayNotification(user: UserLike, chatId: String, displayName: String, msgText: String, image: String? = null, actions: List<NotificationAction> = emptyList()) {
-    if (!user.showNotifications) return
+    if (!user.showNotifications) {
+      ShiroikumaDiag.log(ShiroikumaDiag.Kind.MESSAGES, "notification for chat=$chatId not shown: notifications off for this profile")
+      return
+    }
     Log.d(TAG, "notifyMessageReceived $chatId")
     val now = Clock.System.now().toEpochMilliseconds()
     val recentNotification = (now - prevNtfTime.getOrDefault(user.userId to chatId, 0) < msgNtfTimeoutMs)
@@ -153,6 +156,9 @@ object NtfManager {
       if (ActivityCompat.checkSelfPermission(SimplexApp.context, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
         notify(chatId.hashCode(), builder.build())
         notify(0, summary)
+        ShiroikumaDiag.log(ShiroikumaDiag.Kind.MESSAGES, "notification shown for chat=$chatId")
+      } else {
+        ShiroikumaDiag.log(ShiroikumaDiag.Kind.MESSAGES, "notification for chat=$chatId not shown: no notification permission")
       }
     }
   }
@@ -166,6 +172,10 @@ object NtfManager {
           "callOnLockScreen ${appPreferences.callOnLockScreen.get()}, " +
           "onForeground ${isAppOnForeground}"
     )
+    ShiroikumaDiag.log(ShiroikumaDiag.Kind.MESSAGES) {
+      "call notification contact=${invitation.contact.id}: ${if (isAppOnForeground) "app in foreground, shown in-app" else "posting"} " +
+        "keyguardLocked=${keyguardManager.isKeyguardLocked} callOnLockScreen=${appPreferences.callOnLockScreen.get()}"
+    }
     if (isAppOnForeground) return false
     val contactId = invitation.contact.id
     Log.d(TAG, "notifyCallInvitation $contactId")

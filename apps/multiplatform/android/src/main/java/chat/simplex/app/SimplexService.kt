@@ -304,6 +304,7 @@ class SimplexService: Service() {
       // periodic worker ever brought a killed service back. Decide from the settings instead.
       val shouldRun = shouldServiceRun()
       ServiceTrace.log(context, "ServiceStartWorker run: shouldRun=$shouldRun isServiceStarted=$isServiceStarted savedState=${getServiceState(context)}")
+      ServiceTrace.logDeviceState(context, "watchdog")
       if (shouldRun && !isServiceStarted) {
         Log.d(TAG, "ServiceStartWorker: Starting foreground service (work ID: $id)")
         start()

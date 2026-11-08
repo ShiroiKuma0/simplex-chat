@@ -75,6 +75,9 @@ class SimplexApp: Application(), LifecycleEventObserver {
     context = this
     initHaskell(packageName)
     initMultiplatform()
+    // fork: UI → Diagnostics — switches, retention, the recording notification
+    ShiroikumaDiag.init()
+    ServiceTrace.registerDeviceReceiver(this)
     reconfigureBroadcastReceivers()
     runMigrations()
     tmpDir.deleteRecursively()
@@ -93,6 +96,8 @@ class SimplexApp: Application(), LifecycleEventObserver {
     // background service up in service mode and keep the watchdog worker scheduled.
     val wantService = SimplexService.shouldServiceRun()
     ServiceTrace.log(this, "process start: notificationsMode=${appPrefs.notificationsMode.get()} shouldRun=$wantService")
+    ServiceTrace.logExitReasons(this)
+    ServiceTrace.logDeviceState(this, "process start")
     if (wantService) {
       SimplexService.scheduleStart(this)
       schedulePeriodicServiceRestartWorker()

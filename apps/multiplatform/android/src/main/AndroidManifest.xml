@@ -197,6 +197,12 @@
           android:resource="@xml/file_paths" />
     </provider>
 
+    <!-- downstream (shiroikuma): Mark / Turn all off on the diagnostics recording notification -->
+    <receiver
+        android:name="chat.simplex.common.platform.ShiroikumaDiagReceiver"
+        android:enabled="true"
+        android:exported="false" />
+
     <!-- NtfManager action processing (buttons in notifications) -->
     <receiver
         android:name=".model.NtfManager$NtfActionReceiver"

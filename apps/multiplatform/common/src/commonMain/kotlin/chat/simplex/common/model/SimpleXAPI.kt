@@ -314,6 +314,14 @@ class AppPreferences {
   // caller may be asked for rather than the gate. See AutomationAuth.refuse().
   val automationRequireToken = mkBoolPreference(SHARED_PREFS_AUTOMATION_REQUIRE_TOKEN, false)
   val automationToken = mkStrPreference(SHARED_PREFS_AUTOMATION_TOKEN, null)
+  // downstream (shiroikuma): Diagnostics — every log behind its own switch, all OFF by default;
+  // device-local, never part of a UI export. See ShiroikumaDiag.kt.
+  val diagService = mkBoolPreference(SHARED_PREFS_DIAG_SERVICE, false)
+  val diagDevice = mkBoolPreference(SHARED_PREFS_DIAG_DEVICE, false)
+  val diagNetwork = mkBoolPreference(SHARED_PREFS_DIAG_NETWORK, false)
+  val diagMessages = mkBoolPreference(SHARED_PREFS_DIAG_MESSAGES, false)
+  val diagKeepDays = mkIntPreference(SHARED_PREFS_DIAG_KEEP_DAYS, 0)
+  val diagLastExitTs = mkLongPreference(SHARED_PREFS_DIAG_LAST_EXIT_TS, 0L)
   val fontScale = mkFloatPreference(SHARED_PREFS_FONT_SCALE, 1f)
   val densityScale = mkFloatPreference(SHARED_PREFS_DENSITY_SCALE, 1f)
   val inAppBarsDefaultAlpha = if (deviceSupportsBlur) 0.875f else 0.975f
@@ -625,6 +633,12 @@ class AppPreferences {
     private const val SHARED_PREFS_AUTOMATION_ENABLED = "automation_enabled"
     private const val SHARED_PREFS_AUTOMATION_REQUIRE_TOKEN = "automation_require_token"
     private const val SHARED_PREFS_AUTOMATION_TOKEN = "automation_token"
+    private const val SHARED_PREFS_DIAG_SERVICE = "diag_service"
+    private const val SHARED_PREFS_DIAG_DEVICE = "diag_device"
+    private const val SHARED_PREFS_DIAG_NETWORK = "diag_network"
+    private const val SHARED_PREFS_DIAG_MESSAGES = "diag_messages"
+    private const val SHARED_PREFS_DIAG_KEEP_DAYS = "diag_keep_days"
+    private const val SHARED_PREFS_DIAG_LAST_EXIT_TS = "diag_last_exit_ts"
     private const val SHARED_PREFS_DENSITY_SCALE = "DensityScale"
     private const val SHARED_PREFS_IN_APP_BARS_ALPHA = "InAppBarsAlpha"
     private const val SHARED_PREFS_WHATS_NEW_VERSION = "WhatsNewVersion"
@@ -3156,6 +3170,7 @@ object ChatController {
         }
       }
       is CR.SubscriptionStatusEvt -> {
+        ShiroikumaDiag.log(ShiroikumaDiag.Kind.NETWORK) { "core: subscription ${r.subscriptionStatus} connections=${r.connections.size}" }
         val chatAgentConnId = chatModel.chatAgentConnId.value
         if (chatAgentConnId != null && r.connections.contains(chatAgentConnId)) {
           withContext(Dispatchers.Main) {
@@ -3185,6 +3200,11 @@ object ChatController {
             withContext(Dispatchers.Main) {
               chatModel.chatsContext.increaseUnreadCounter(rhId, r.user)
             }
+          }
+          if (cItem.chatDir.sent.not()) ShiroikumaDiag.log(ShiroikumaDiag.Kind.MESSAGES) {
+            val late = (kotlinx.datetime.Clock.System.now() - cItem.meta.itemTs).inWholeSeconds
+            "message in chat=${cInfo.id} item=${cItem.id} sent=${cItem.meta.itemTs} late=${late}s rcvNew=${cItem.isRcvNew} " +
+              "showNtf=${cItem.showNotification} ntfsEnabled=${cInfo.ntfsEnabled(cItem)} activeUser=${active(r.user)}"
           }
           val file = cItem.file
           val mc = cItem.content.msgContent
@@ -3542,6 +3562,10 @@ object ChatController {
         }
       }
       is CR.CallInvitation -> {
+        ShiroikumaDiag.log(ShiroikumaDiag.Kind.MESSAGES) {
+          val inv = r.callInvitation
+          "call invitation contact=${inv.contact.id} ${inv.callType.media} sent=${inv.callTs} late=${(kotlinx.datetime.Clock.System.now() - inv.callTs).inWholeSeconds}s"
+        }
         chatModel.callManager.reportNewIncomingCall(r.callInvitation.copy(remoteHostId = rhId))
       }
       is CR.CallOffer -> {

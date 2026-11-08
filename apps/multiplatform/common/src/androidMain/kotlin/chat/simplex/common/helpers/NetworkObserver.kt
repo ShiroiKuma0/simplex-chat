@@ -60,6 +60,7 @@ class NetworkObserver {
       online = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED),
     )
     if (prevInfo != info) {
+      ShiroikumaDiag.log(ShiroikumaDiag.Kind.NETWORK) { "android: ${info.networkType} online=${info.online} (internet=${capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)} validated=${capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)})" }
       prevInfo = info
       setNetworkInfo(info)
     }
@@ -67,6 +68,7 @@ class NetworkObserver {
 
   private fun networkLost() {
     Log.d(TAG, "Network changed: lost")
+    ShiroikumaDiag.log(ShiroikumaDiag.Kind.NETWORK, "android: network lost")
     val none = UserNetworkInfo(networkType = UserNetworkType.NONE, false)
     prevInfo = none
     setNetworkInfo(none)
@@ -80,6 +82,9 @@ class NetworkObserver {
       withBGApi {
         if (controller.hasChatCtrl() && controller.apiSetNetworkInfo(info)) {
           chatModel.networkInfo.value = info
+          ShiroikumaDiag.log(ShiroikumaDiag.Kind.NETWORK, "core: network set ${info.networkType} online")
+        } else {
+          ShiroikumaDiag.log(ShiroikumaDiag.Kind.NETWORK, "core: network ${info.networkType} online NOT set (chat ${if (controller.hasChatCtrl()) "refused" else "not running"})")
         }
       }
     } else {
@@ -87,6 +92,7 @@ class NetworkObserver {
         delay(3000)
         if (controller.hasChatCtrl() && controller.apiSetNetworkInfo(info)) {
           chatModel.networkInfo.value = info
+          ShiroikumaDiag.log(ShiroikumaDiag.Kind.NETWORK, "core: network set ${info.networkType} offline after 3 s")
         }
       }
     }
