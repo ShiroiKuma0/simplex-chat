@@ -248,6 +248,17 @@
         android:enabled="true"
         android:exported="false" />
 
+    <!-- downstream (shiroikuma): keep-alive door for 自由作業盤's watchdog — no permission, no
+         token: it only starts the service when the app's own settings want it running -->
+    <receiver
+        android:name=".receivers.KeepAliveReceiver"
+        android:enabled="true"
+        android:exported="true">
+      <intent-filter>
+        <action android:name="${applicationId}.action.KEEP_ALIVE" />
+      </intent-filter>
+    </receiver>
+
     <!-- downstream (shiroikuma): 保存復元 headless state export, driven by 白い熊 自由作業盤.
          No android:permission — the calling task cannot hold one, so the automation token
          (device-local, default off) is the gate. -->
