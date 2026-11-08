@@ -208,32 +208,7 @@ private fun CIMetaText(
   }
   if (showStatus) {
     Spacer(Modifier.width(4.dp))
-    val statusIcon = meta.statusIcon(MaterialTheme.colors.primary, color, paleColor)
-    if (statusIcon != null) {
-      val (icon, statusColor) = statusIcon
-      val status = meta.itemStatus
-      if (status is CIStatus.SndSent || status is CIStatus.SndRcvd) {
-        // downstream (shiroikuma): user-configurable size, thickness, color and glyph of the
-        // sent/delivered delivery ticks
-        val tickScale = remember { appPreferences.messageTickScale.state }.value
-        val tickThickness = remember { appPreferences.messageTickThickness.state }.value
-        val sentColor = remember { appPreferences.messageTickSentColor.state }.value?.colorFromReadableHex()
-        val rcvdColor = remember { appPreferences.messageTickReceivedColor.state }.value?.colorFromReadableHex()
-        val delivered = status is CIStatus.SndRcvd
-        val tickColor = when {
-          status is CIStatus.SndSent -> sentColor ?: statusColor
-          // keep the red "bad message hash" warning regardless of the custom delivered color
-          delivered && statusColor != Color.Red -> rcvdColor ?: statusColor
-          else -> statusColor
-        }
-        val sentGlyph = remember { appPreferences.messageTickSentGlyph.state }.value
-        val deliveredGlyph = remember { appPreferences.messageTickDeliveredGlyph.state }.value
-        val glyph = if (delivered) TickGlyph.from(deliveredGlyph, TickGlyph.DOT) else TickGlyph.from(sentGlyph, TickGlyph.TICK1)
-        TickIcon(glyph = glyph, color = tickColor, sizeDp = BASE_TICK_HEIGHT_DP * tickScale, thickness = tickThickness)
-      } else {
-        StatusIconText(painterResource(icon), statusColor)
-      }
-    } else if (!meta.disappearing) {
+    if (!MessageStatusIcon(meta, color, paleColor) && !meta.disappearing) {
       StatusIconText(painterResource(MR.images.ic_circle_filled), Color.Transparent)
     }
   }
@@ -394,6 +369,39 @@ fun metaReserveCopy(
 
 private val CIMeta.tallStatusIcon: Boolean get() =
   itemStatus is CIStatus.SndSent || itemStatus is CIStatus.SndRcvd
+
+/**
+ * downstream (shiroikuma): the delivery status of one message — the configurable sent/delivered
+ * ticks, or upstream's status icon for every other state. Shared by the bubble's meta row and the
+ * chat list's last-message preview. Returns false when the status has no icon.
+ */
+@Composable
+fun MessageStatusIcon(meta: CIMeta, color: Color, paleColor: Color): Boolean {
+  val (icon, statusColor) = meta.statusIcon(MaterialTheme.colors.primary, color, paleColor) ?: return false
+  val status = meta.itemStatus
+  if (status is CIStatus.SndSent || status is CIStatus.SndRcvd) {
+    // downstream (shiroikuma): user-configurable size, thickness, color and glyph of the
+    // sent/delivered delivery ticks
+    val tickScale = remember { appPreferences.messageTickScale.state }.value
+    val tickThickness = remember { appPreferences.messageTickThickness.state }.value
+    val sentColor = remember { appPreferences.messageTickSentColor.state }.value?.colorFromReadableHex()
+    val rcvdColor = remember { appPreferences.messageTickReceivedColor.state }.value?.colorFromReadableHex()
+    val delivered = status is CIStatus.SndRcvd
+    val tickColor = when {
+      status is CIStatus.SndSent -> sentColor ?: statusColor
+      // keep the red "bad message hash" warning regardless of the custom delivered color
+      delivered && statusColor != Color.Red -> rcvdColor ?: statusColor
+      else -> statusColor
+    }
+    val sentGlyph = remember { appPreferences.messageTickSentGlyph.state }.value
+    val deliveredGlyph = remember { appPreferences.messageTickDeliveredGlyph.state }.value
+    val glyph = if (delivered) TickGlyph.from(deliveredGlyph, TickGlyph.DOT) else TickGlyph.from(sentGlyph, TickGlyph.TICK1)
+    TickIcon(glyph = glyph, color = tickColor, sizeDp = BASE_TICK_HEIGHT_DP * tickScale, thickness = tickThickness)
+  } else {
+    StatusIconText(painterResource(icon), statusColor)
+  }
+  return true
+}
 
 @Composable
 private fun StatusIconText(icon: Painter, color: Color) {

@@ -276,6 +276,17 @@ fun ChatPreviewView(
 
         else -> null
       }
+      // downstream (shiroikuma): ↗ before a message we sent, ↙ before one we received, so the
+      // chat list tells at a glance who wrote last (chat events carry no arrow)
+      val arrow = if (ci.content.msgContent != null) buildAnnotatedString {
+        if (ci.chatDir.sent) withStyle(SpanStyle(color = MaterialTheme.colors.primary, fontWeight = FontWeight.Bold)) { append("↗ ") }
+        else withStyle(SpanStyle(color = MaterialTheme.colors.secondary, fontWeight = FontWeight.Bold)) { append("↙ ") }
+      } else null
+      val fullPrefix = when {
+        arrow == null -> prefix
+        prefix == null -> arrow
+        else -> arrow + prefix
+      }
 
       MarkdownText(
         text,
@@ -303,7 +314,7 @@ fun ChatPreviewView(
         ),
         inlineContent = inlineTextContent,
         modifier = Modifier.fillMaxWidth(),
-        prefix = prefix
+        prefix = fullPrefix
       )
     }
   }
@@ -419,7 +430,19 @@ fun ChatPreviewView(
           }
           Spacer(Modifier.width(8.sp.toDp()))
           val ts = getTimestampText(chat.chatItems.lastOrNull()?.meta?.itemTs ?: chat.chatInfo.chatTs)
-          ChatListTimestampView(ts)
+          // downstream (shiroikuma): the last message's delivery status beside its time, so the
+          // state of every chat shows at a glance — only for a message we sent
+          val lastItem = chat.chatItems.lastOrNull()
+          if (lastItem != null && lastItem.chatDir.sent && lastItem.meta.itemDeleted == null) {
+            Row(verticalAlignment = Alignment.Bottom) {
+              Box(Modifier.padding(bottom = 7.sp.toDp(), end = 4.sp.toDp())) {
+                MessageStatusIcon(lastItem.meta, MaterialTheme.colors.secondary, MaterialTheme.colors.secondary)
+              }
+              ChatListTimestampView(ts)
+            }
+          } else {
+            ChatListTimestampView(ts)
+          }
         }
         Row(Modifier.heightIn(min = 46.sp.toDp()).fillMaxWidth()) {
           Row(Modifier.padding(top = 3.sp.toDp()).weight(1f)) {
