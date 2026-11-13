@@ -7,6 +7,18 @@ SimpleX Chat release history unchanged below.
 
 # 白い熊 SimpleX — fork releases
 
+## 白い熊 SimpleX 7.1-beta.9+008 — 2026-11-13
+
+Built on upstream **v7.1.0-beta.9**.
+
+**Calls — one tap instead of two**
+- **A tap on the call button in a chat starts an audio call at once.** It used to open a menu asking audio or video first.
+- **A long press on the call button opens that audio/video menu.** A video call is started from there.
+
+**UI & theming**
+- **The audio/video menu items are outlined pills:** never filled, a thin accent frame, label and icon in the accent colour, both the same width.
+- The menu is only as wide as its pills instead of spanning 250 dp.
+
 ## 白い熊 SimpleX 7.1-beta.9+007 — 2026-11-08
 
 Built on upstream **v7.1.0-beta.9**.

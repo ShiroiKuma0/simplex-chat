@@ -10,7 +10,7 @@ A fork of [SimpleX Chat](https://github.com/simplex-chat/simplex-chat) with **ma
 
 Installs **side-by-side** with official SimpleX Chat (app id `shiroikuma.simplex`).
 
-**📥 Latest release: [`7.1-beta.9+007`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
+**📥 Latest release: [`7.1-beta.9+008`](https://github.com/ShiroiKuma0/simplex-chat/releases/latest)** — [all releases & APK downloads »](https://github.com/ShiroiKuma0/simplex-chat/releases)
 
 </div>
 
@@ -60,7 +60,7 @@ Stock lifts "raised" dark surfaces by mixing a few percent of the text color int
 
 ## 👆 Built for one hand on a big phone
 
-The **bottom** bar is 50% taller than stock — and only the bottom one — with its avatar and new-chat button scaled to match, so the tap targets are comfortable on a foldable. Every long-press shortcut into the UI page fires at 250 ms instead of the platform's sluggish default, without making message menus trigger by accident. **Private notes** is hidden from the chat list unless you switch it on, so the list holds only real conversations.
+The **bottom** bar is 50% taller than stock — and only the bottom one — with its avatar and new-chat button scaled to match, so the tap targets are comfortable on a foldable. Every long-press shortcut into the UI page fires at 250 ms instead of the platform's sluggish default, without making message menus trigger by accident. The **call button calls on a tap** — the audio/video choice moved to a long press, as two outlined pills. **Private notes** is hidden from the chat list unless you switch it on, so the list holds only real conversations.
 
 ---
 
