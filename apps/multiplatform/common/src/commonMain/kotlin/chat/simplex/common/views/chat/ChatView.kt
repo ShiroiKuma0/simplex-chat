@@ -1305,11 +1305,22 @@ fun BoxScope.ChatInfoToolbar(
           }
         }
       }
-      // Call button always in toolbar; tap opens Audio/Video call submenu
+      // Call button always in toolbar.
+      // downstream (shiroikuma): a tap starts the audio call at once; the Audio/Video submenu
+      // opens on a long press only.
       if (canStartCall) {
         barButtons.add(0) {
-          IconButton({ showCallMenu.value = true }) {
-            Icon(painterResource(MR.images.ic_call_500), null, tint = MaterialTheme.colors.primary)
+          Box(
+            Modifier
+              .size(48.dp)
+              .clip(CircleShape)
+              .combinedClickable(
+                onClick = { startCall(CallMediaType.Audio) },
+                onLongClick = { showCallMenu.value = true }
+              ),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(painterResource(MR.images.ic_call_500), stringResource(MR.strings.icon_descr_audio_call), tint = MaterialTheme.colors.primary)
           }
         }
       }
@@ -1555,12 +1566,14 @@ fun BoxScope.ChatInfoToolbar(
         contentFilterMenuItems.forEach { it() }
       }
     }
+    // downstream (shiroikuma): the call menu holds two pills and is only as wide as the wider one.
     val callMenuWidth = remember { mutableStateOf(250.dp) }
     val callMenuHeight = remember { mutableStateOf(0.dp) }
     DefaultDropdownMenu(
       showCallMenu,
+      minWidth = 0.dp,
       modifier = Modifier.onSizeChanged { with(density) {
-        callMenuWidth.value = it.width.toDp().coerceAtLeast(250.dp)
+        callMenuWidth.value = it.width.toDp()
         if (oneHandUI.value && chatBottomBar.value && (appPlatform.isDesktop || (platform.androidApiLevel ?: 0) >= 30)) callMenuHeight.value = it.height.toDp()
       } },
       offset = DpOffset(-callMenuWidth.value, if (oneHandUI.value && chatBottomBar.value) -callMenuHeight.value else AppBarHeight)
@@ -1568,13 +1581,13 @@ fun BoxScope.ChatInfoToolbar(
       if (chatInfo is ChatInfo.Direct) {
         val callMenuItems: List<@Composable () -> Unit> = buildList {
           add {
-            ItemAction(stringResource(MR.strings.icon_descr_audio_call).capitalize(Locale.current), painterResource(MR.images.ic_call_500), onClick = {
+            ItemActionPill(stringResource(MR.strings.icon_descr_audio_call).capitalize(Locale.current), painterResource(MR.images.ic_call_500), onClick = {
               showCallMenu.value = false
               startCall(CallMediaType.Audio)
             })
           }
           add {
-            ItemAction(stringResource(MR.strings.icon_descr_video_call).capitalize(Locale.current), painterResource(MR.images.ic_videocam), onClick = {
+            ItemActionPill(stringResource(MR.strings.icon_descr_video_call).capitalize(Locale.current), painterResource(MR.images.ic_videocam), onClick = {
               showCallMenu.value = false
               startCall(CallMediaType.Video)
             })

@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 
@@ -17,6 +18,8 @@ fun DefaultDropdownMenu(
   modifier: Modifier = Modifier,
   offset: DpOffset = DpOffset(0.dp, 0.dp),
   onClosed: State<() -> Unit> = remember { mutableStateOf({}) },
+  // downstream (shiroikuma): a menu of pills hugs them instead of spanning 250 dp
+  minWidth: Dp = 250.dp,
   dropdownMenuItems: (@Composable () -> Unit)?
 ) {
   // downstream (shiroikuma): the popup is clipped to `medium`, so a border in the same shape on
@@ -30,7 +33,7 @@ fun DefaultDropdownMenu(
       expanded = showMenu.value,
       onDismissRequest = { showMenu.value = false },
       modifier = modifier
-        .widthIn(min = 250.dp)
+        .widthIn(min = minWidth)
         .border(2.dp, MaterialTheme.colors.primary, shape)
         .background(MaterialTheme.colors.surface)
         .padding(vertical = 4.dp),

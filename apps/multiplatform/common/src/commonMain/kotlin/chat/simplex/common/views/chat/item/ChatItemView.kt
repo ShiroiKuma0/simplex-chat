@@ -1128,6 +1128,30 @@ fun ItemAction(text: String, icon: Painter, color: Color = Color.Unspecified, on
   }
 }
 
+/**
+ * downstream (shiroikuma): a menu item drawn as the theme's pill — never filled, a thin accent
+ * frame, label and icon in the accent colour. The menu's column is as wide as its widest item, so
+ * every pill in one menu gets that width and none is stretched beyond it.
+ */
+@Composable
+fun ItemActionPill(text: String, icon: Painter, color: Color = MaterialTheme.colors.primary, onClick: () -> Unit) {
+  val shape = RoundedCornerShape(50)
+  Row(
+    Modifier
+      .padding(horizontal = 10.dp, vertical = 4.dp)
+      .fillMaxWidth()
+      .clip(shape)
+      .background(MaterialTheme.colors.background)
+      .border(1.25.dp, color, shape)
+      .clickable(onClick = onClick)
+      .padding(horizontal = 18.dp, vertical = 9.dp),
+    verticalAlignment = Alignment.CenterVertically
+  ) {
+    Text(text, Modifier.weight(1f).padding(end = 14.dp), color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Icon(icon, text, tint = color)
+  }
+}
+
 @Composable
 fun ItemAction(text: String, icon: ImageBitmap, textColor: Color = Color.Unspecified, iconColor: Color = Color.Unspecified, onClick: () -> Unit) {
   val finalColor = if (textColor == Color.Unspecified) {
